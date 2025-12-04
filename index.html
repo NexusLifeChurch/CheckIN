@@ -103,8 +103,12 @@
                 <span>CheckIN</span>
             </h1>
             <div id="user-profile" class="hidden flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full text-sm hover:bg-white/20 transition-all cursor-pointer">
-                <img id="user-img" src="" class="w-8 h-8 rounded-full border-2 border-orange-200">
-                <span id="user-name" class="truncate max-w-[100px] font-light">...</span>
+                <img id="user-img" src="" class="w-8 h-8 rounded-full border-2 border-orange-200 flex-shrink-0">
+                <div class="flex flex-col overflow-hidden">
+                    <span id="user-name" class="truncate max-w-[100px] font-medium leading-tight">...</span>
+                    <!-- แสดง User ID ตัวเล็กๆ เพื่อตรวจสอบ -->
+                    <span id="user-id" class="text-[10px] text-orange-200 truncate max-w-[100px] font-mono opacity-80"></span>
+                </div>
             </div>
         </div>
     </header>
@@ -117,7 +121,6 @@
             <h2 class="text-2xl md:text-3xl font-bold drop-shadow-md mb-2" id="page-title">
                 เข้าร่วมกิจกรรม
             </h2>
-            <!-- 3. ลบข้อความบรรยาย (ประจำสัปดาห์/เลือกกิจกรรม) ออกแล้ว -->
         </div>
 
         <!-- Loading State -->
@@ -179,9 +182,11 @@
             const profileDiv = document.getElementById('user-profile');
             const img = document.getElementById('user-img');
             const name = document.getElementById('user-name');
+            const userIdDisplay = document.getElementById('user-id');
             
             img.src = profile.pictureUrl || 'https://via.placeholder.com/30';
             name.textContent = profile.displayName;
+            userIdDisplay.textContent = profile.userId;
             profileDiv.classList.remove('hidden');
         }
 
@@ -228,7 +233,6 @@
             grid.classList.remove('hidden');
 
             activities.forEach(act => {
-                // 3. ขยายรูปให้ใหญ่ขึ้น (w-24 h-24)
                 const iconHtml = act.Icon && act.Icon.startsWith('http') 
                     ? `<img src="${act.Icon}" class="w-24 h-24 object-cover rounded-xl shadow-sm bg-gray-50">`
                     : `<div class="w-24 h-24 bg-[#EFEBE9] text-[#5D4037] rounded-xl flex items-center justify-center text-5xl shadow-sm"><i class="fa-solid fa-video"></i></div>`;
@@ -307,7 +311,8 @@
             }
         }
 
-        function submitCheckIn(activity) {
+        // *** แก้ไขฟังก์ชันนี้ให้เป็น async และดึง Profile ใหม่ก่อนส่ง ***
+        async function submitCheckIn(activity) {
             Swal.fire({
                 title: 'ลงทะเบียน',
                 html: '<div class="text-base text-gray-600 mt-2">กำลังบันทึกข้อมูลและเตรียมเข้าห้อง Zoom</div>',
@@ -317,13 +322,27 @@
                 }
             });
 
+            // --- Robustness Fix: Ensure Profile Data ---
+            // ถ้าไม่มีชื่อ หรือไม่มี currentLineProfile ให้ลองดึงใหม่เดี๋ยวนี้
+            if (!currentLineProfile || !currentLineProfile.displayName) {
+                try {
+                    // Force refresh profile
+                    currentLineProfile = await liff.getProfile();
+                } catch (e) {
+                    console.error("Failed to refresh profile:", e);
+                }
+            }
+            
+            // Fallback object to prevent null pointer
+            const safeProfile = currentLineProfile || {};
+
             // Update Payload to include LINE Profile Data
             const payload = {
                 action: 'checkIn',
-                lineUserId: currentLineProfile.userId,
-                displayName: currentLineProfile.displayName || '',
-                pictureUrl: currentLineProfile.pictureUrl || '',
-                statusMessage: currentLineProfile.statusMessage || '',
+                lineUserId: safeProfile.userId || 'U_UNKNOWN', // Fallback
+                displayName: safeProfile.displayName || 'Guest', // Fallback
+                pictureUrl: safeProfile.pictureUrl || '',
+                statusMessage: safeProfile.statusMessage || '',
                 actId: activity.Act_ID
             };
 
