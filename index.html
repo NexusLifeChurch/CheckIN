@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบเช็คชื่อและเปิด Zoom</title>
+    
+    <!-- LINE LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    
+    <!-- Tailwind CSS (Utility classes) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SweetAlert2 (Popups) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- FontAwesome & Google Fonts -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Config & Styles -->
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: linear-gradient(135deg, #F3E5AB 0%, #D2B48C 100%); /* Coffee Milk Gradient */
+            min-height: 100vh;
+            color: #4B3621; /* Dark Coffee Text */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Coffee Theme Custom Classes */
+        .bg-coffee-dark { background-color: #6F4E37; }
+        .bg-coffee-medium { background-color: #8B4513; }
+        .bg-coffee-light { background-color: #D2B48C; }
+        .text-coffee-dark { color: #3E2723; }
+        
+        /* Card Styling */
+        .activity-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(75, 54, 33, 0.1), 0 2px 4px -1px rgba(75, 54, 33, 0.06);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(139, 69, 19, 0.1);
+        }
+        
+        .activity-card:active {
+            transform: scale(0.98);
+        }
+
+        .activity-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(111, 78, 55, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Button Styling */
+        .btn-coffee {
+            background: linear-gradient(to right, #8B4513, #A0522D);
+            color: white;
+            box-shadow: 0 4px 10px rgba(139, 69, 19, 0.3);
+        }
+        .btn-coffee:active {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #6F4E37;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* SweetAlert Customization */
+        .swal2-popup {
+            font-family: 'Prompt', sans-serif !important;
+            border-radius: 15px !important;
+        }
+    </style>
+</head>
+<body class="pb-10">
+
+    <!-- Header -->
+    <header class="bg-coffee-dark text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex items-center justify-between">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-mug-hot"></i>
+                <span>Activity Check-in</span>
+            </h1>
+            <div id="user-profile" class="hidden flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-sm">
+                <img id="user-img" src="" class="w-6 h-6 rounded-full border border-white">
+                <span id="user-name" class="truncate max-w-[100px]">...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        
+        <!-- Category Title -->
+        <div class="mb-6 text-center">
+            <h2 class="text-2xl font-bold text-coffee-dark drop-shadow-sm" id="page-title">
+                รายการกิจกรรม
+            </h2>
+            <p class="text-sm text-gray-700 mt-1">เลือกกิจกรรมเพื่อเข้าสู่ระบบ Zoom</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="text-center py-10">
+            <div class="loader mb-4"></div>
+            <p class="text-gray-600 animate-pulse">กำลังโหลดข้อมูลกิจกรรม...</p>
+        </div>
+
+        <!-- Activity Grid -->
+        <div id="activity-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+            <!-- Cards will be injected here via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-12 bg-white/50 rounded-xl mx-4">
+            <i class="fa-solid fa-calendar-xmark text-4xl text-gray-400 mb-3"></i>
+            <p class="text-gray-600">ไม่มีกิจกรรมในหมวดหมู่นี้</p>
+        </div>
+
+    </main>
+
+    <!-- Script Logic -->
+    <script>
+        // ================= CONFIGURATION =================
+        // *** REPLACE WITH YOUR GOOGLE APPS SCRIPT WEB APP URL ***
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxTImr6MSQS0pXJk2al8-Z-f7j7WRm3WrVXu6Ac6vLdKQvapyNR23yA3CQjrjPddhCbaQ/exec';
+        const LIFF_ID = '2008560135-XxjApLRo'; 
+        // ================================================
+
+        // Global State
+        let currentLineProfile = null;
+        let urlCategory = '';
+
+        // Initialize LIFF
+        async function main() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+
+                currentLineProfile = await liff.getProfile();
+                updateUIProfile(currentLineProfile);
+
+                // Get Category from URL Param
+                const urlParams = new URLSearchParams(window.location.search);
+                urlCategory = urlParams.get('category') || '';
+                
+                // Fetch Data
+                fetchActivities(urlCategory);
+
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'LIFF Error',
+                    text: 'ไม่สามารถเชื่อมต่อกับ LINE ได้: ' + err.message
+                });
+            }
+        }
+
+        function updateUIProfile(profile) {
+            const profileDiv = document.getElementById('user-profile');
+            const img = document.getElementById('user-img');
+            const name = document.getElementById('user-name');
+            
+            img.src = profile.pictureUrl || 'https://via.placeholder.com/30';
+            name.textContent = profile.displayName;
+            profileDiv.classList.remove('hidden');
+        }
+
+        // Fetch Activities from GAS
+        async function fetchActivities(category) {
+            try {
+                // If user hasn't set the URL yet, show alert
+                if (GAS_API_URL.includes('YOUR_GOOGLE')) {
+                    throw new Error('กรุณาใส่ Web App URL ในโค้ด index.html');
+                }
+
+                const response = await fetch(`${GAS_API_URL}?action=getActivities&category=${encodeURIComponent(category)}`);
+                const result = await response.json();
+
+                document.getElementById('loading-state').classList.add('hidden');
+
+                if (result.status === 'success') {
+                    renderActivities(result.data);
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                document.getElementById('loading-state').classList.add('hidden');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'โหลดข้อมูลล้มเหลว',
+                    text: error.message
+                });
+            }
+        }
+
+        // Render Cards
+        function renderActivities(activities) {
+            const grid = document.getElementById('activity-grid');
+            const empty = document.getElementById('empty-state');
+            const title = document.getElementById('page-title');
+
+            if (urlCategory) {
+                title.innerHTML = `หมวดหมู่: <span class="text-[#8B4513]">${urlCategory}</span>`;
+            }
+
+            if (activities.length === 0) {
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            grid.innerHTML = '';
+            grid.classList.remove('hidden');
+
+            activities.forEach(act => {
+                const iconHtml = act.Icon && act.Icon.startsWith('http') 
+                    ? `<img src="${act.Icon}" class="w-12 h-12 object-contain mb-2 rounded-lg">`
+                    : `<div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center mb-2 text-xl"><i class="fa-solid fa-video"></i></div>`;
+
+                const card = document.createElement('div');
+                card.className = 'activity-card p-5 flex flex-col justify-between h-full cursor-pointer relative overflow-hidden';
+                card.onclick = () => handleActivityClick(act);
+
+                card.innerHTML = `
+                    <div class="absolute top-0 right-0 p-2">
+                        ${act.HasPassword ? '<i class="fa-solid fa-lock text-gray-400 text-xs"></i>' : ''}
+                    </div>
+                    <div>
+                        ${iconHtml}
+                        <h3 class="text-lg font-bold text-coffee-dark leading-tight mb-1">${act.Act_Name}</h3>
+                        <p class="text-xs text-gray-500 mb-2">${act.ZOOM_name}</p>
+                        <p class="text-sm text-gray-600 line-clamp-2">${act.Details}</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+                        <span class="text-xs font-medium text-[#8B4513] bg-orange-50 px-2 py-1 rounded">${act.Category}</span>
+                        <button class="btn-coffee px-4 py-1.5 rounded-full text-sm font-medium hover:brightness-110 transition-all">
+                            เข้าร่วม
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Handle Click
+        async function handleActivityClick(activity) {
+            // Password Check
+            if (activity.HasPassword) {
+                const { value: password } = await Swal.fire({
+                    title: 'กรุณากรอกรหัสผ่าน',
+                    input: 'password',
+                    inputPlaceholder: 'รหัสผ่านกิจกรรม',
+                    confirmButtonText: 'ยืนยัน',
+                    confirmButtonColor: '#8B4513',
+                    showCancelButton: true,
+                    cancelButtonText: 'ยกเลิก'
+                });
+
+                if (password) {
+                    if (String(password) === String(activity.StoredPassword)) {
+                        submitCheckIn(activity);
+                    } else {
+                        Swal.fire('รหัสผ่านไม่ถูกต้อง', 'กรุณาลองใหม่อีกครั้ง', 'error');
+                    }
+                }
+            } else {
+                // No password needed
+                submitCheckIn(activity);
+            }
+        }
+
+        // Submit to Backend
+        function submitCheckIn(activity) {
+            Swal.fire({
+                title: 'กำลังบันทึกข้อมูล...',
+                html: 'กรุณารอสักครู่ ระบบกำลังเช็คชื่อและเตรียมลิ้งก์ Zoom',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Prepare Payload
+            const payload = {
+                action: 'checkIn',
+                lineUserId: currentLineProfile.userId,
+                actId: activity.Act_ID
+            };
+
+            // Use fetch with POST
+            fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+                // Note: 'Content-Type': 'application/json' usually triggers CORS preflight which GAS doesn't handle well.
+                // Sending plain text (default) works best with GAS doPost.
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Success -> Open Zoom
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'เช็คชื่อสำเร็จ',
+                        text: 'กำลังเปิดแอปพลิเคชัน Zoom...',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        openZoom(data.zoomLink);
+                    });
+                } else {
+                    throw new Error(data.message);
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: error.message || 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้'
+                });
+            });
+        }
+
+        function openZoom(url) {
+            if (!url) return;
+            
+            // LIFF external open for Mobile (Crucial for iOS/Zoom App)
+            if (liff.isInClient()) {
+                liff.openWindow({
+                    url: url,
+                    external: true
+                });
+            } else {
+                // Desktop Web Fallback
+                window.location.href = url;
+            }
+        }
+
+        // Start App
+        main();
+
+    </script>
+</body>
+</html>
