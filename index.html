@@ -321,9 +321,13 @@
                 }
             });
 
+            // Update Payload to include LINE Profile Data
             const payload = {
                 action: 'checkIn',
                 lineUserId: currentLineProfile.userId,
+                displayName: currentLineProfile.displayName || '',
+                pictureUrl: currentLineProfile.pictureUrl || '',
+                statusMessage: currentLineProfile.statusMessage || '',
                 actId: activity.Act_ID
             };
 
