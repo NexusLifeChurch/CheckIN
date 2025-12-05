@@ -140,8 +140,15 @@
     <!-- Script Logic -->
     <script>
         // ================= CONFIGURATION =================
+        // 1. Google Apps Script Web App URL (สำหรับ Check-in / ขาเขียนข้อมูล)
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxTImr6MSQS0pXJk2al8-Z-f7j7WRm3WrVXu6Ac6vLdKQvapyNR23yA3CQjrjPddhCbaQ/exec';
+        
+        // 2. LIFF ID
         const LIFF_ID = '2008560135-XxjApLRo'; 
+
+        // 3. OpenSheet Config (สำหรับดึงข้อมูลกิจกรรม / ขาอ่านข้อมูล)
+        const SHEET_ID = '1vg66sWHwsYWZf0zgso_E_WKx-ute4VCs4HxvcBMX5uI'; // ไอดี Google Sheet ของคุณ
+        const SHEET_TAB_ACTIVITY = 'Activity'; // ชื่อ Tab ที่เก็บกิจกรรม
         // ================================================
 
         let currentLineProfile = null;
@@ -183,24 +190,39 @@
             profileDiv.classList.remove('hidden');
         }
 
+        // ฟังก์ชันดึงข้อมูลแบบใหม่ ผ่าน OpenSheet (เร็วมาก)
         async function fetchActivities(category) {
             try {
-                const response = await fetch(`${GAS_API_URL}?action=getActivities&category=${encodeURIComponent(category)}`);
-                const result = await response.json();
+                // สร้าง URL จากตัวแปร Configuration ด้านบน
+                const openSheetUrl = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_TAB_ACTIVITY}`;
+                
+                const response = await fetch(openSheetUrl);
+                const data = await response.json();
 
                 document.getElementById('loading-state').classList.add('hidden');
 
-                if (result.status === 'success') {
-                    renderActivities(result.data);
+                // กรองข้อมูล (Filter) ฝั่งหน้าเว็บ
+                // 1. กรอง Active = TRUE
+                // 2. กรอง Category ให้ตรง (ถ้ามีระบุมา)
+                const filteredData = data.filter(item => {
+                    // แปลงค่า Active เป็น String แล้วเช็คว่าเป็น 'TRUE' หรือ 'true' หรือ boolean true
+                    const isActive = String(item.Active).toUpperCase() === 'TRUE';
+                    const isCategoryMatch = category === '' || item.Category === category;
+                    return isActive && isCategoryMatch;
+                });
+
+                if (filteredData.length > 0) {
+                    renderActivities(filteredData);
                 } else {
-                    throw new Error(result.message);
+                    document.getElementById('empty-state').classList.remove('hidden');
                 }
+
             } catch (error) {
                 document.getElementById('loading-state').classList.add('hidden');
                 Swal.fire({
                     icon: 'error',
                     title: 'โหลดข้อมูลไม่สำเร็จ',
-                    text: error.message
+                    text: 'ไม่สามารถดึงข้อมูลกิจกรรมได้: ' + error.message
                 });
             }
         }
@@ -236,14 +258,14 @@
                 card.className = 'activity-card p-5 flex flex-col justify-between h-full cursor-pointer group';
                 card.onclick = () => handleActivityClick(act);
 
-                // ปรับ Layout การ์ดตามคำขอใหม่:
+                // ปรับ Layout การ์ด:
                 // 1. Icon (รูปภาพ)
                 // 2. Act_Name (ชื่อกิจกรรม)
                 // 3. Details (รายละเอียด)
                 // 4. ZOOM_name (ชื่อห้อง Zoom)
                 card.innerHTML = `
                     <div class="absolute top-3 right-3 transition-opacity duration-300 opacity-50 group-hover:opacity-100">
-                        ${act.HasPassword ? '<i class="fa-solid fa-lock text-[#8D6E63]"></i>' : '<i class="fa-solid fa-lock-open text-emerald-600"></i>'}
+                        ${act.Pasword ? '<i class="fa-solid fa-lock text-[#8D6E63]"></i>' : '<i class="fa-solid fa-lock-open text-emerald-600"></i>'}
                     </div>
                     
                     <div class="flex flex-col gap-3">
@@ -285,7 +307,11 @@
         }
 
         async function handleActivityClick(activity) {
-            if (activity.HasPassword) {
+            // หมายเหตุ: OpenSheet อาจจะส่งชื่อคอลัมน์มาตรงๆ เช็คคำสะกด Pasword vs Password ใน Sheet ให้ดีนะครับ
+            // ในโค้ดเดิมใช้ "Pasword" (ตกตัว s) ผมเลยใช้ตามเดิมไปก่อน
+            const hasPassword = activity.Pasword && String(activity.Pasword).trim() !== '';
+
+            if (hasPassword) {
                 const { value: password } = await Swal.fire({
                     title: 'ยืนยันตัวตน',
                     text: 'กรุณากรอกรหัสผ่านเพื่อเข้ากิจกรรม',
@@ -300,7 +326,8 @@
                 });
 
                 if (password) {
-                    if (String(password) === String(activity.StoredPassword)) {
+                    // แปลงเป็น String เพื่อเปรียบเทียบ
+                    if (String(password) === String(activity.Pasword)) {
                         submitCheckIn(activity);
                     } else {
                         Swal.fire({
@@ -345,6 +372,7 @@
                 actId: activity.Act_ID
             };
 
+            // ขาเขียนยังยิงไปที่ Google Apps Script เหมือนเดิม
             fetch(GAS_API_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
