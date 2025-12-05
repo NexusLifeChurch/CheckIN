@@ -351,9 +351,18 @@
         }
 
         async function submitCheckIn(activity) {
+            // 1. ตรวจสอบเงื่อนไข Onsite ก่อนแสดง Loading
+            const zoomName = activity.ZOOM_name ? String(activity.ZOOM_name).trim().toLowerCase() : '';
+            const isOnsite = zoomName === 'onsite';
+            
+            // เปลี่ยนข้อความ Loading ตามประเภทกิจกรรม
+            const loadingText = isOnsite 
+                ? 'กำลังบันทึกข้อมูลและเตรียม QR Code' 
+                : 'กำลังบันทึกข้อมูลและเตรียมเข้าห้อง Zoom';
+
             Swal.fire({
                 title: 'ลงทะเบียน',
-                html: '<div class="text-base text-gray-600 mt-2">กำลังบันทึกข้อมูลและเตรียมเข้าห้อง Zoom</div>',
+                html: `<div class="text-base text-gray-600 mt-2">${loadingText}</div>`,
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -388,11 +397,6 @@
             .then(data => {
                 if (data.status === 'success') {
                     
-                    // --- ตรวจสอบเงื่อนไข Onsite จากตัวแปร activity โดยตรง ---
-                    // ใช้ Logic เดียวกับ renderActivities เพื่อความถูกต้อง
-                    const zoomName = activity.ZOOM_name ? String(activity.ZOOM_name).trim().toLowerCase() : '';
-                    const isOnsite = zoomName === 'onsite';
-
                     if (isOnsite) {
                         // สร้าง Timestamp
                         const now = new Date();
@@ -410,7 +414,9 @@
                             title: '<span class="text-[#3E2723]">ลงทะเบียนสำเร็จ</span>',
                             html: `
                                 <div class="flex flex-col items-center pt-2">
-                                    <p class="text-sm text-gray-600 mb-4 px-2">โปรดแสดง QR-Code นี้เพื่อเข้าร่วมกิจกรรม</p>
+                                    <p class="text-sm text-gray-600 mb-1 px-2">โปรดแสดง QR-Code นี้เพื่อเข้าร่วมกิจกรรม</p>
+                                    <!-- 2. เพิ่มข้อความแนะนำให้ Screen Shot -->
+                                    <p class="text-xs text-gray-400 mb-4 px-2">(สามารถ Screen Shot เก็บไว้ได้)</p>
                                     
                                     <!-- 3. รูปโปรไฟล์ -->
                                     <img src="${safeProfile.pictureUrl || 'https://via.placeholder.com/80'}" 
