@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- 2. เปลี่ยน Title เป็น NxLife Community -->
     <title>NxLife Community</title>
     
     <!-- LINE LIFF SDK -->
@@ -67,7 +66,7 @@
         .zoom-badge {
             background-color: #EFEBE9;
             color: #5D4037;
-            font-size: 0.9rem; /* ขยายขนาดนิดหน่อย */
+            font-size: 0.9rem;
             padding: 6px 12px;
             border-radius: 8px;
             display: inline-block;
@@ -97,16 +96,13 @@
     <header class="bg-[#3E2723]/90 backdrop-blur-sm text-white p-4 shadow-lg sticky top-0 z-50 transition-all duration-300">
         <div class="container mx-auto flex items-center justify-between">
             <h1 class="text-3xl font-bold flex items-center gap-4">
-                <!-- 2. เปลี่ยน Icon เป็นแก้วกาแฟใหญ่ๆ -->
                 <i class="fa-solid fa-mug-hot text-orange-200 text-4xl"></i>
-                <!-- 2. เปลี่ยนข้อความ Header เป็น CheckIN -->
                 <span>CheckIN</span>
             </h1>
             <div id="user-profile" class="hidden flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full text-sm hover:bg-white/20 transition-all cursor-pointer">
                 <img id="user-img" src="" class="w-8 h-8 rounded-full border-2 border-orange-200 flex-shrink-0">
                 <div class="flex flex-col overflow-hidden">
                     <span id="user-name" class="truncate max-w-[100px] font-medium leading-tight">...</span>
-                    <!-- 1. เอา User ID ที่เป็น Uxxxxxx ออกไป -->
                 </div>
             </div>
         </div>
@@ -181,17 +177,14 @@
             const profileDiv = document.getElementById('user-profile');
             const img = document.getElementById('user-img');
             const name = document.getElementById('user-name');
-            // const userIdDisplay = document.getElementById('user-id'); // เอาออก
             
             img.src = profile.pictureUrl || 'https://via.placeholder.com/30';
             name.textContent = profile.displayName;
-            // userIdDisplay.textContent = profile.userId; // เอาออก
             profileDiv.classList.remove('hidden');
         }
 
         async function fetchActivities(category) {
             try {
-                // Call API
                 const response = await fetch(`${GAS_API_URL}?action=getActivities&category=${encodeURIComponent(category)}`);
                 const result = await response.json();
 
@@ -232,7 +225,6 @@
             grid.classList.remove('hidden');
 
             activities.forEach(act => {
-                // 3. ปรับ logic การโชว์รูปให้ยืดหยุ่นขึ้น (ตัดช่องว่าง, ไม่บังคับ http)
                 const iconUrl = act.Icon ? act.Icon.trim() : '';
                 const hasIcon = iconUrl.length > 0;
 
@@ -244,39 +236,43 @@
                 card.className = 'activity-card p-5 flex flex-col justify-between h-full cursor-pointer group';
                 card.onclick = () => handleActivityClick(act);
 
-                // 2. ปรับ Layout การ์ด: Icon -> ZOOM_name -> Act_Name -> Details
-                // 4. เปลี่ยนสีกุญแจล็อคเป็นเขียวเข้ม (emerald-600)
+                // ปรับ Layout การ์ดตามคำขอใหม่:
+                // 1. Icon (รูปภาพ)
+                // 2. Act_Name (ชื่อกิจกรรม)
+                // 3. Details (รายละเอียด)
+                // 4. ZOOM_name (ชื่อห้อง Zoom)
                 card.innerHTML = `
                     <div class="absolute top-3 right-3 transition-opacity duration-300 opacity-50 group-hover:opacity-100">
                         ${act.HasPassword ? '<i class="fa-solid fa-lock text-[#8D6E63]"></i>' : '<i class="fa-solid fa-lock-open text-emerald-600"></i>'}
                     </div>
                     
                     <div class="flex flex-col gap-3">
+                        <!-- 1. Icon -->
                         <div class="flex items-start justify-between mb-1">
                             ${iconHtml}
                         </div>
 
                         <div>
-                            <!-- สลับตำแหน่ง: เอา ZOOM Name ขึ้นก่อน -->
-                            <div class="mb-2">
-                                <span class="zoom-badge">
-                                    <i class="fa-solid fa-desktop mr-1.5"></i> ${act.ZOOM_name}
-                                </span>
-                            </div>
-
-                            <!-- ชื่อกิจกรรม (Act_Name) ตัวใหญ่ขึ้น -->
+                            <!-- 2. Act_Name (ชื่อกิจกรรม) -->
                             <h3 class="text-2xl font-bold text-[#3E2723] leading-snug group-hover:text-[#8D6E63] transition-colors mb-2">
                                 ${act.Act_Name}
                             </h3>
                             
-                            <!-- รายละเอียด (Details) -->
-                            <p class="text-lg text-gray-600 line-clamp-2 font-light leading-relaxed">
+                            <!-- 3. Details (รายละเอียด) -->
+                            <p class="text-lg text-gray-600 line-clamp-2 font-light leading-relaxed mb-3">
                                 ${act.Details || '-'}
                             </p>
+
+                            <!-- 4. ZOOM_name (ชื่อห้อง) -->
+                            <div>
+                                <span class="zoom-badge">
+                                    <i class="fa-solid fa-desktop mr-1.5"></i> ${act.ZOOM_name}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- ปุ่มเข้า ZOOM ตัวใหญ่ขึ้น -->
+                    <!-- ปุ่มเข้า ZOOM -->
                     <div class="mt-6 pt-4 border-t border-gray-100">
                         <button class="btn-coffee w-full py-3.5 rounded-xl text-xl font-semibold flex items-center justify-center gap-2">
                             <i class="fa-solid fa-video"></i>
@@ -320,7 +316,6 @@
             }
         }
 
-        // *** แก้ไขฟังก์ชันนี้ให้เป็น async และดึง Profile ใหม่ก่อนส่ง ***
         async function submitCheckIn(activity) {
             Swal.fire({
                 title: 'ลงทะเบียน',
@@ -331,25 +326,20 @@
                 }
             });
 
-            // --- Robustness Fix: Ensure Profile Data ---
-            // ถ้าไม่มีชื่อ หรือไม่มี currentLineProfile ให้ลองดึงใหม่เดี๋ยวนี้
             if (!currentLineProfile || !currentLineProfile.displayName) {
                 try {
-                    // Force refresh profile
                     currentLineProfile = await liff.getProfile();
                 } catch (e) {
                     console.error("Failed to refresh profile:", e);
                 }
             }
             
-            // Fallback object to prevent null pointer
             const safeProfile = currentLineProfile || {};
 
-            // Update Payload to include LINE Profile Data
             const payload = {
                 action: 'checkIn',
-                lineUserId: safeProfile.userId || 'U_UNKNOWN', // Fallback
-                displayName: safeProfile.displayName || 'Guest', // Fallback
+                lineUserId: safeProfile.userId || 'U_UNKNOWN',
+                displayName: safeProfile.displayName || 'Guest',
                 pictureUrl: safeProfile.pictureUrl || '',
                 statusMessage: safeProfile.statusMessage || '',
                 actId: activity.Act_ID
