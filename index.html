@@ -210,6 +210,13 @@
                     return isActive && isCategoryMatch && hasID;
                 });
 
+                // --- เพิ่มส่วนการเรียงลำดับ (Sorting) ---
+                // เรียงตาม Act_ID จากน้อยไปมาก
+                filteredData.sort((a, b) => {
+                    // ใช้ localeCompare พร้อม numeric: true เพื่อให้เรียงตัวเลขใน string ได้ถูกต้อง (เช่น 1, 2, 10)
+                    return String(a.Act_ID).localeCompare(String(b.Act_ID), undefined, {numeric: true});
+                });
+
                 if (filteredData.length > 0) {
                     renderActivities(filteredData);
                 } else {
