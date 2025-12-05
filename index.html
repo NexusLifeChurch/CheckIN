@@ -258,7 +258,10 @@
                 card.onclick = () => handleActivityClick(act);
 
                 // --- ตรวจสอบว่าเป็น Onsite หรือไม่ เพื่อเปลี่ยนข้อความปุ่ม ---
-                const isActivityOnsite = act.ZOOM_name && String(act.ZOOM_name).trim().toLowerCase() === 'onsite';
+                // ใช้การแปลงเป็น String และ trim/toLowerCase เพื่อความแม่นยำ
+                const zoomName = act.ZOOM_name ? String(act.ZOOM_name).trim().toLowerCase() : '';
+                const isActivityOnsite = zoomName === 'onsite';
+                
                 const buttonText = isActivityOnsite ? 'ร่วมกิจกรรม' : 'เข้า ZOOM';
                 const buttonIcon = isActivityOnsite ? '<i class="fa-solid fa-qrcode"></i>' : '<i class="fa-solid fa-video"></i>';
 
@@ -386,8 +389,9 @@
                 if (data.status === 'success') {
                     
                     // --- ตรวจสอบเงื่อนไข Onsite จากตัวแปร activity โดยตรง ---
-                    // หมายเหตุ: ใช้ .trim() และ .toLowerCase() เพื่อความชัวร์ในการเปรียบเทียบ
-                    const isOnsite = activity.ZOOM_name && String(activity.ZOOM_name).trim().toLowerCase() === 'onsite';
+                    // ใช้ Logic เดียวกับ renderActivities เพื่อความถูกต้อง
+                    const zoomName = activity.ZOOM_name ? String(activity.ZOOM_name).trim().toLowerCase() : '';
+                    const isOnsite = zoomName === 'onsite';
 
                     if (isOnsite) {
                         // สร้าง Timestamp
