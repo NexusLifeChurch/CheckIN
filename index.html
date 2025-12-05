@@ -202,13 +202,12 @@
                 document.getElementById('loading-state').classList.add('hidden');
 
                 // กรองข้อมูล (Filter) ฝั่งหน้าเว็บ
-                // 1. กรอง Active = TRUE
-                // 2. กรอง Category ให้ตรง (ถ้ามีระบุมา)
                 const filteredData = data.filter(item => {
-                    // แปลงค่า Active เป็น String แล้วเช็คว่าเป็น 'TRUE' หรือ 'true' หรือ boolean true
                     const isActive = String(item.Active).toUpperCase() === 'TRUE';
                     const isCategoryMatch = category === '' || item.Category === category;
-                    return isActive && isCategoryMatch;
+                    // เพิ่มการตรวจสอบ Act_ID: ต้องมีค่าและไม่เป็นช่องว่าง
+                    const hasID = item.Act_ID && String(item.Act_ID).trim() !== '';
+                    return isActive && isCategoryMatch && hasID;
                 });
 
                 if (filteredData.length > 0) {
@@ -363,16 +362,16 @@
             
             const safeProfile = currentLineProfile || {};
 
+            // ส่งข้อมูลไป Backend โดยใช้ ID ที่ Trim แล้ว
             const payload = {
                 action: 'checkIn',
                 lineUserId: safeProfile.userId || 'U_UNKNOWN',
                 displayName: safeProfile.displayName || 'Guest',
                 pictureUrl: safeProfile.pictureUrl || '',
                 statusMessage: safeProfile.statusMessage || '',
-                actId: activity.Act_ID
+                actId: String(activity.Act_ID).trim() // สำคัญ: ตัดช่องว่างเพื่อให้ Backend หาเจอแน่นอน
             };
 
-            // ขาเขียนยังยิงไปที่ Google Apps Script เหมือนเดิม
             fetch(GAS_API_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
@@ -380,15 +379,78 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'สำเร็จ!',
-                        text: 'กำลังเปิด Zoom Application...',
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        openZoom(data.zoomLink);
-                    });
+                    
+                    // --- เพิ่มเงื่อนไขสำหรับ Onsite ---
+                    const isOnsite = activity.ZOOM_name && String(activity.ZOOM_name).trim().toLowerCase() === 'onsite';
+
+                    if (isOnsite) {
+                        // สร้าง Timestamp
+                        const now = new Date();
+                        const timestamp = now.toLocaleString('th-TH', { 
+                            dateStyle: 'medium', 
+                            timeStyle: 'short' 
+                        });
+                        
+                        // ข้อมูลสำหรับ QR Code
+                        const qrData = `${safeProfile.displayName}|${timestamp}`;
+                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+
+                        // แสดง Popup QR Code
+                        Swal.fire({
+                            title: '<span class="text-[#3E2723]">ลงทะเบียนสำเร็จ</span>',
+                            html: `
+                                <div class="flex flex-col items-center pt-2">
+                                    <p class="text-sm text-gray-600 mb-4 px-2">โปรดแสดง QR-Code นี้เพื่อเข้าร่วมกิจกรรม</p>
+                                    
+                                    <!-- 3. รูปโปรไฟล์ -->
+                                    <img src="${safeProfile.pictureUrl || 'https://via.placeholder.com/80'}" 
+                                         class="w-20 h-20 rounded-full border-4 border-white shadow-md mb-3 object-cover">
+                                    
+                                    <!-- 2. ชื่อ -->
+                                    <h3 class="text-lg font-bold text-[#5D4037] mb-3">${safeProfile.displayName}</h3>
+                                    
+                                    <!-- 1. QR Code (DisplayName + Timestamp) -->
+                                    <div class="bg-white p-2 rounded-xl shadow-inner border border-gray-200 mb-2">
+                                        <img src="${qrUrl}" alt="QR Code" class="w-48 h-48">
+                                    </div>
+                                    
+                                    <!-- Timestamp -->
+                                    <p class="text-xs text-gray-400 mt-1 font-mono">${timestamp}</p>
+                                </div>
+                            `,
+                            showConfirmButton: true,
+                            confirmButtonText: 'รับทราบ', // 4. ปุ่มรับทราบ
+                            confirmButtonColor: '#5D4037',
+                            customClass: {
+                                popup: 'rounded-2xl',
+                                confirmButton: 'rounded-xl px-6 py-2.5 text-base font-medium shadow-lg'
+                            }
+                        });
+
+                    } else {
+                        // --- กรณีไม่ใช่ Onsite (ทำงานแบบเดิม) ---
+                        if (data.zoomLink && data.zoomLink.trim() !== "") {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'สำเร็จ!',
+                                text: 'กำลังเปิด Zoom Application...',
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(() => {
+                                openZoom(data.zoomLink);
+                            });
+                        } else {
+                            // กรณีไม่มีลิ้งก์ Zoom (เช่นลืมใส่)
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ลงทะเบียนสำเร็จ',
+                                text: 'บันทึกข้อมูลเรียบร้อยแล้ว (กิจกรรมนี้ไม่มี Zoom Link)',
+                                confirmButtonText: 'ตกลง',
+                                confirmButtonColor: '#5D4037'
+                            });
+                        }
+                    }
+
                 } else {
                     throw new Error(data.message);
                 }
