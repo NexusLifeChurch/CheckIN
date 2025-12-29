@@ -2,505 +2,288 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NxLife Community</title>
-    
-    <!-- LINE LIFF SDK -->
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Check-in</title>
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
-    <!-- FontAwesome & Google Fonts -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-
+    <!-- LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- Tailwind CSS for Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             font-family: 'Prompt', sans-serif;
-            background: linear-gradient(135deg, #4E342E 0%, #8D6E63 100%);
+            background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
             min-height: 100vh;
-            color: #3E2723;
-            -webkit-tap-highlight-color: transparent;
         }
-
-        .activity-card {
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 16px; 
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); 
-            border: 1px solid rgba(139, 69, 19, 0.05);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
+        .coffee-gradient {
+            background: linear-gradient(to right, #6f4e37, #a67b5b);
         }
-        
-        .activity-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        .coffee-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-left: 5px solid #6f4e37;
+            transition: transform 0.2s;
         }
-
-        .activity-card:active {
-            transform: scale(0.98);
+        .coffee-card:hover {
+            transform: translateY(-3px);
         }
-
-        .btn-coffee {
-            background: linear-gradient(135deg, #5D4037 0%, #8D6E63 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(93, 64, 55, 0.3);
-            transition: all 0.3s ease;
+        .tab-active {
+            border-bottom: 3px solid #6f4e37;
+            color: #6f4e37;
+            font-weight: 700;
         }
-        
-        .btn-coffee:hover {
-            filter: brightness(1.1);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(93, 64, 55, 0.4);
-        }
-        
-        .btn-coffee:active {
-            transform: translateY(1px);
-        }
-
-        .zoom-badge {
-            background-color: #EFEBE9;
-            color: #5D4037;
-            font-size: 0.9rem;
-            padding: 6px 12px;
-            border-radius: 8px;
-            display: inline-block;
-            font-weight: 500;
-        }
-
         .loader {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #fff;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #6f4e37;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .swal2-popup {
-            font-family: 'Prompt', sans-serif !important;
-            border-radius: 16px !important;
-        }
     </style>
 </head>
-<body class="pb-10 selection:bg-orange-200">
+<body class="text-slate-800">
 
     <!-- Header -->
-    <header class="bg-[#3E2723]/90 backdrop-blur-sm text-white p-4 shadow-lg sticky top-0 z-50 transition-all duration-300">
-        <div class="container mx-auto flex items-center justify-between">
-            <h1 class="text-3xl font-bold flex items-center gap-4">
-                <i class="fa-solid fa-mug-hot text-orange-200 text-4xl"></i>
-                <span>CheckIN</span>
-            </h1>
-            <div id="user-profile" class="hidden flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full text-sm hover:bg-white/20 transition-all cursor-pointer">
-                <img id="user-img" src="" class="w-8 h-8 rounded-full border-2 border-orange-200 flex-shrink-0">
-                <div class="flex flex-col overflow-hidden">
-                    <span id="user-name" class="truncate max-w-[100px] font-medium leading-tight">...</span>
-                </div>
+    <header class="coffee-gradient text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-tight">Activity Check-in</h1>
+            <div id="userProfile" class="flex items-center gap-2">
+                <div id="loaderProfile" class="w-8 h-8 rounded-full bg-white/20 animate-pulse"></div>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8">
+    <!-- Top Navigation Tabs -->
+    <nav class="bg-white/80 backdrop-blur-sm shadow-sm sticky top-[64px] z-40">
+        <div class="max-w-4xl mx-auto flex justify-around">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-3 px-4 text-sm font-medium tab-active">หน้าหลัก</button>
+            <button onclick="switchTab('history')" id="tab-history" class="py-3 px-4 text-sm font-medium text-slate-400">ประวัติ</button>
+            <button onclick="switchTab('help')" id="tab-help" class="py-3 px-4 text-sm font-medium text-slate-400">ช่วยเหลือ</button>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto p-4 md:p-6 mb-20">
         
-        <!-- Title Section -->
-        <div class="mb-8 text-center text-white">
-            <h2 class="text-2xl md:text-3xl font-bold drop-shadow-md mb-2" id="page-title">
-                เข้าร่วมกิจกรรม
-            </h2>
+        <!-- Tab 1: Dashboard -->
+        <div id="content-dashboard" class="space-y-4">
+            <div id="dashboard-loading" class="flex flex-col items-center py-20 text-slate-400">
+                <div class="loader mb-2"></div>
+                <p>กำลังเตรียมรายการกิจกรรม...</p>
+            </div>
+            <div id="dashboard-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div id="dashboard-error" class="hidden bg-white p-8 rounded-2xl shadow-sm text-center border-t-4 border-red-400">
+                <p id="error-text" class="text-slate-600 font-medium"></p>
+            </div>
         </div>
 
-        <!-- Loading State -->
-        <div id="loading-state" class="text-center py-12">
-            <div class="loader mb-4"></div>
-            <p class="text-white/80 animate-pulse font-light">กำลังโหลดข้อมูล...</p>
+        <!-- Tab 2: History -->
+        <div id="content-history" class="hidden space-y-4">
+            <h2 class="font-bold text-lg text-amber-900">ประวัติการเข้าร่วม</h2>
+            <div id="history-list" class="space-y-3"></div>
         </div>
 
-        <!-- Activity Grid -->
-        <div id="activity-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 hidden">
-            <!-- Cards will be injected here -->
+        <!-- Tab 3: Help -->
+        <div id="content-help" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm">
+                <h2 class="font-bold text-lg mb-4">วิธีการใช้งาน</h2>
+                <ul class="space-y-3 text-sm text-slate-600">
+                    <li class="flex gap-2"><span>1.</span> เลือกประเภทกิจกรรมจากเมนู LINE</li>
+                    <li class="flex gap-2"><span>2.</span> กดปุ่มเข้าสู่ ZOOM เมื่อถึงเวลาที่กำหนด</li>
+                    <li class="flex gap-2"><span>3.</span> ระบบจะบันทึกการเช็คอินให้อัตโนมัติก่อนเปิดแอป ZOOM</li>
+                </ul>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-slate-400 mb-2">หากพบปัญหาการใช้งาน</p>
+                <a href="https://line.me/ti/p/@admin" class="inline-block coffee-gradient text-white px-8 py-3 rounded-full font-bold shadow-md hover:opacity-90 transition-all">ติดต่อเจ้าหน้าที่</a>
+            </div>
         </div>
-
-        <!-- Empty State -->
-        <div id="empty-state" class="hidden text-center py-16 bg-white/90 backdrop-blur rounded-2xl mx-4 shadow-lg">
-            <i class="fa-solid fa-inbox text-5xl text-[#8D6E63] mb-4 opacity-50"></i>
-            <p class="text-[#5D4037] font-medium">ไม่มีกิจกรรมในรายการนี้</p>
-        </div>
-
     </main>
 
-    <!-- Script Logic -->
     <script>
-        // ================= CONFIGURATION =================
-        // 1. Google Apps Script Web App URL (สำหรับ Check-in / ขาเขียนข้อมูล)
-        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxTImr6MSQS0pXJk2al8-Z-f7j7WRm3WrVXu6Ac6vLdKQvapyNR23yA3CQjrjPddhCbaQ/exec';
-        
-        // 2. LIFF ID
-        const LIFF_ID = '2008560135-XxjApLRo'; 
+        // CONFIGURATION
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-p-Mc7Eu059t4n2fnTxhBl07NM98TeEq4Ng6FPMtriMtVotUx7YCrec8K6iBeadPBvw/exec"; // *** นำ URL จากการ Deploy GAS มาวางที่นี่ ***
+        const LIFF_ID = "2008560135-XxjApLRo";
 
-        // 3. OpenSheet Config (สำหรับดึงข้อมูลกิจกรรม / ขาอ่านข้อมูล)
-        const SHEET_ID = '1vg66sWHwsYWZf0zgso_E_WKx-ute4VCs4HxvcBMX5uI'; // ไอดี Google Sheet ของคุณ
-        const SHEET_TAB_ACTIVITY = 'Activity'; // ชื่อ Tab ที่เก็บกิจกรรม
-        // ================================================
+        let currentUser = null;
+        let currentType = new URLSearchParams(window.location.search).get('type') || 'Community';
 
-        let currentLineProfile = null;
-        let urlCategory = '';
-
-        async function main() {
+        async function initApp() {
             try {
                 await liff.init({ liffId: LIFF_ID });
-                
                 if (!liff.isLoggedIn()) {
                     liff.login();
                     return;
                 }
-
-                currentLineProfile = await liff.getProfile();
-                updateUIProfile(currentLineProfile);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                urlCategory = urlParams.get('category') || '';
-                
-                fetchActivities(urlCategory);
-
+                const profile = await liff.getProfile();
+                currentUser = profile;
+                document.getElementById('userProfile').innerHTML = `
+                    <span class="text-xs font-medium hidden md:block">${profile.displayName}</span>
+                    <img src="${profile.pictureUrl}" class="w-8 h-8 rounded-full border-2 border-white/50 shadow-sm">
+                `;
+                loadDashboard();
             } catch (err) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'LIFF Error',
-                    text: 'Connection Failed: ' + err.message
-                });
+                console.error("LIFF Init Error:", err);
             }
         }
 
-        function updateUIProfile(profile) {
-            const profileDiv = document.getElementById('user-profile');
-            const img = document.getElementById('user-img');
-            const name = document.getElementById('user-name');
-            
-            img.src = profile.pictureUrl || 'https://via.placeholder.com/30';
-            name.textContent = profile.displayName;
-            profileDiv.classList.remove('hidden');
-        }
-
-        // ฟังก์ชันดึงข้อมูลแบบใหม่ ผ่าน OpenSheet (เร็วมาก)
-        async function fetchActivities(category) {
+        async function loadDashboard() {
+            showLoader('dashboard', true);
             try {
-                // สร้าง URL จากตัวแปร Configuration ด้านบน
-                const openSheetUrl = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_TAB_ACTIVITY}`;
-                
-                const response = await fetch(openSheetUrl);
+                const response = await fetch(`${SCRIPT_URL}?action=getDashboard&userId=${currentUser.userId}&type=${currentType}`);
                 const data = await response.json();
-
-                document.getElementById('loading-state').classList.add('hidden');
-
-                // กรองข้อมูล (Filter) ฝั่งหน้าเว็บ
-                const filteredData = data.filter(item => {
-                    const isActive = String(item.Active).toUpperCase() === 'TRUE';
-                    const isCategoryMatch = category === '' || item.Category === category;
-                    // เพิ่มการตรวจสอบ Act_ID: ต้องมีค่าและไม่เป็นช่องว่าง
-                    const hasID = item.Act_ID && String(item.Act_ID).trim() !== '';
-                    return isActive && isCategoryMatch && hasID;
-                });
-
-                // --- เพิ่มส่วนการเรียงลำดับ (Sorting) ---
-                // เรียงตาม Act_ID จากน้อยไปมาก
-                filteredData.sort((a, b) => {
-                    // ใช้ localeCompare พร้อม numeric: true เพื่อให้เรียงตัวเลขใน string ได้ถูกต้อง (เช่น 1, 2, 10)
-                    return String(a.Act_ID).localeCompare(String(b.Act_ID), undefined, {numeric: true});
-                });
-
-                if (filteredData.length > 0) {
-                    renderActivities(filteredData);
+                
+                if (data.errorMessage) {
+                    document.getElementById('dashboard-list').innerHTML = '';
+                    document.getElementById('dashboard-error').classList.remove('hidden');
+                    document.getElementById('error-text').innerText = data.errorMessage;
                 } else {
-                    document.getElementById('empty-state').classList.remove('hidden');
+                    renderActivities(data.activities, data.user);
                 }
-
-            } catch (error) {
-                document.getElementById('loading-state').classList.add('hidden');
-                Swal.fire({
-                    icon: 'error',
-                    title: 'โหลดข้อมูลไม่สำเร็จ',
-                    text: 'ไม่สามารถดึงข้อมูลกิจกรรมได้: ' + error.message
-                });
+            } catch (err) {
+                Swal.fire("ผิดพลาด", "ไม่สามารถดึงข้อมูลได้", "error");
+            } finally {
+                showLoader('dashboard', false);
             }
         }
 
-        function renderActivities(activities) {
-            const grid = document.getElementById('activity-grid');
-            const empty = document.getElementById('empty-state');
-            const title = document.getElementById('page-title');
-
-            if (urlCategory) {
-                title.innerHTML = `เข้าร่วมกิจกรรม : <span class="text-orange-200 underline decoration-2 underline-offset-4">${urlCategory}</span>`;
-            } else {
-                title.innerHTML = `เข้าร่วมกิจกรรม : <span class="text-orange-200">ทั้งหมด</span>`;
-            }
-
-            if (activities.length === 0) {
-                empty.classList.remove('hidden');
+        function renderActivities(list, userData) {
+            const container = document.getElementById('dashboard-list');
+            document.getElementById('dashboard-error').classList.add('hidden');
+            
+            if (list.length === 0) {
+                container.innerHTML = '<p class="col-span-full text-center py-20 text-slate-400">ไม่มีกิจกรรมที่เปิดอยู่ในขณะนี้</p>';
                 return;
             }
 
-            grid.innerHTML = '';
-            grid.classList.remove('hidden');
-
-            activities.forEach(act => {
-                const iconUrl = act.Icon ? act.Icon.trim() : '';
-                const hasIcon = iconUrl.length > 0;
-
-                const iconHtml = hasIcon 
-                    ? `<img src="${iconUrl}" class="w-24 h-24 object-cover rounded-xl shadow-sm bg-gray-50 mx-auto md:mx-0" onerror="this.onerror=null; this.parentNode.innerHTML='<div class=\'w-24 h-24 bg-[#EFEBE9] text-[#5D4037] rounded-xl flex items-center justify-center text-5xl shadow-sm\'><i class=\'fa-solid fa-image\'></i></div>'">`
-                    : `<div class="w-24 h-24 bg-[#EFEBE9] text-[#5D4037] rounded-xl flex items-center justify-center text-5xl shadow-sm"><i class="fa-solid fa-video"></i></div>`;
-
-                const card = document.createElement('div');
-                card.className = 'activity-card p-5 flex flex-col justify-between h-full cursor-pointer group';
-                card.onclick = () => handleActivityClick(act);
-
-                // --- ตรวจสอบว่าเป็น Onsite หรือไม่ เพื่อเปลี่ยนข้อความปุ่ม ---
-                // ใช้การแปลงเป็น String และ trim/toLowerCase เพื่อความแม่นยำ
-                const zoomName = act.ZOOM_name ? String(act.ZOOM_name).trim().toLowerCase() : '';
-                const isActivityOnsite = zoomName === 'onsite';
-                
-                const buttonText = isActivityOnsite ? 'ร่วมกิจกรรม' : 'เข้า ZOOM';
-                const buttonIcon = isActivityOnsite ? '<i class="fa-solid fa-qrcode"></i>' : '<i class="fa-solid fa-video"></i>';
-
-                // ปรับ Layout การ์ด:
-                // 1. Icon (รูปภาพ)
-                // 2. Act_Name (ชื่อกิจกรรม)
-                // 3. Details (รายละเอียด)
-                // 4. ZOOM_name (ชื่อห้อง Zoom)
-                card.innerHTML = `
-                    <div class="absolute top-3 right-3 transition-opacity duration-300 opacity-50 group-hover:opacity-100">
-                        ${act.Pasword ? '<i class="fa-solid fa-lock text-[#8D6E63]"></i>' : '<i class="fa-solid fa-lock-open text-emerald-600"></i>'}
-                    </div>
-                    
-                    <div class="flex flex-col gap-3">
-                        <!-- 1. Icon -->
-                        <div class="flex items-start justify-between mb-1">
-                            ${iconHtml}
+            container.innerHTML = list.map(act => {
+                const timeStatus = checkTimeRule(act.Act_Date, act.StartTime, act.EndTime);
+                return `
+                    <div class="coffee-card p-5 rounded-2xl shadow-sm space-y-3">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded uppercase tracking-wider">${act.Act_Type}</span>
+                            <span class="text-xs font-bold ${timeStatus.color}">${timeStatus.label}</span>
                         </div>
-
-                        <div>
-                            <!-- 2. Act_Name (ชื่อกิจกรรม) -->
-                            <h3 class="text-2xl font-bold text-[#3E2723] leading-snug group-hover:text-[#8D6E63] transition-colors mb-2">
-                                ${act.Act_Name}
-                            </h3>
-                            
-                            <!-- 3. Details (รายละเอียด) -->
-                            <p class="text-lg text-gray-600 line-clamp-2 font-light leading-relaxed mb-3">
-                                ${act.Details || '-'}
-                            </p>
-
-                            <!-- 4. ZOOM_name (ชื่อห้อง) -->
-                            <div>
-                                <span class="zoom-badge">
-                                    <i class="fa-solid fa-desktop mr-1.5"></i> ${act.ZOOM_name}
-                                </span>
-                            </div>
+                        <h3 class="font-bold text-slate-800 leading-tight">${act.Act_Name}</h3>
+                        <p class="text-xs text-slate-500 line-clamp-2">${act.Act_Description || ''}</p>
+                        <div class="flex items-center gap-2 text-xs text-slate-400">
+                             <span>📅 ${act.Act_Date}</span>
+                             <span>⏰ ${act.StartTime}-${act.EndTime}</span>
                         </div>
-                    </div>
-
-                    <!-- ปุ่ม Action (เปลี่ยนตามเงื่อนไข Onsite) -->
-                    <div class="mt-6 pt-4 border-t border-gray-100">
-                        <button class="btn-coffee w-full py-3.5 rounded-xl text-xl font-semibold flex items-center justify-center gap-2">
-                            ${buttonIcon}
-                            ${buttonText}
-                        </button>
+                        ${timeStatus.canJoin ? 
+                            `<button onclick="handleCheckIn('${encodeURIComponent(JSON.stringify(act))}', '${encodeURIComponent(JSON.stringify(userData))}')" 
+                                class="w-full coffee-gradient text-white py-3 rounded-xl font-bold shadow-md active:scale-95 transition-all">
+                                🚀 เข้าร่วม ZOOM
+                            </button>` : 
+                            `<button disabled class="w-full bg-slate-100 text-slate-400 py-3 rounded-xl font-bold cursor-not-allowed">
+                                ${timeStatus.buttonText}
+                            </button>`
+                        }
                     </div>
                 `;
-                grid.appendChild(card);
-            });
+            }).join('');
         }
 
-        async function handleActivityClick(activity) {
-            // หมายเหตุ: OpenSheet อาจจะส่งชื่อคอลัมน์มาตรงๆ เช็คคำสะกด Pasword vs Password ใน Sheet ให้ดีนะครับ
-            // ในโค้ดเดิมใช้ "Pasword" (ตกตัว s) ผมเลยใช้ตามเดิมไปก่อน
-            const hasPassword = activity.Pasword && String(activity.Pasword).trim() !== '';
+        function checkTimeRule(dateStr, start, end) {
+            // จำลองการคำนวณเวลา (ต้องปรับตาม Format วันที่จริงใน Sheet)
+            const now = new Date();
+            const [d, m, y] = dateStr.split('/');
+            const startTime = new Date(`${y}-${m}-${d}T${start}:00`);
+            const endTime = new Date(`${y}-${m}-${d}T${end}:00`);
+            const diffMin = (startTime - now) / (1000 * 60);
 
-            if (hasPassword) {
-                const { value: password } = await Swal.fire({
-                    title: 'ยืนยันตัวตน',
-                    text: 'กรุณากรอกรหัสผ่านเพื่อเข้ากิจกรรม',
-                    input: 'password',
-                    inputPlaceholder: 'Password',
-                    confirmButtonText: 'ยืนยัน',
-                    confirmButtonColor: '#5D4037',
-                    showCancelButton: true,
-                    cancelButtonText: 'ยกเลิก',
-                    cancelButtonColor: '#d33',
-                    focusConfirm: false
-                });
-
-                if (password) {
-                    // แปลงเป็น String เพื่อเปรียบเทียบ
-                    if (String(password) === String(activity.Pasword)) {
-                        submitCheckIn(activity);
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'รหัสผ่านผิด',
-                            text: 'กรุณาลองใหม่อีกครั้ง',
-                            confirmButtonColor: '#5D4037'
-                        });
-                    }
-                }
-            } else {
-                submitCheckIn(activity);
-            }
-        }
-
-        async function submitCheckIn(activity) {
-            // 1. ตรวจสอบเงื่อนไข Onsite ก่อนแสดง Loading
-            const zoomName = activity.ZOOM_name ? String(activity.ZOOM_name).trim().toLowerCase() : '';
-            const isOnsite = zoomName === 'onsite';
+            if (now > endTime) return { label: "จบกิจกรรมแล้ว", color: "text-slate-400", canJoin: false, buttonText: "ปิดรับเช็คอิน" };
+            if (now >= startTime && now <= endTime) return { label: "เริ่มแล้ว", color: "text-emerald-500", canJoin: true };
+            if (diffMin <= 15) return { label: "เตรียมตัว", color: "text-orange-500", canJoin: false, buttonText: "เตรียมตัวเร็วๆ นี้" };
             
-            // เปลี่ยนข้อความ Loading ตามประเภทกิจกรรม
-            const loadingText = isOnsite 
-                ? 'กำลังบันทึกข้อมูลและเตรียม QR Code' 
-                : 'กำลังบันทึกข้อมูลและเตรียมเข้าห้อง Zoom';
+            return { label: "ยังไม่เปิด", color: "text-slate-400", canJoin: false, buttonText: "ยังไม่ถึงเวลา" };
+        }
+
+        async function handleCheckIn(actEncoded, userEncoded) {
+            const act = JSON.parse(decodeURIComponent(actEncoded));
+            const user = JSON.parse(decodeURIComponent(userEncoded));
 
             Swal.fire({
-                title: 'ลงทะเบียน',
-                html: `<div class="text-base text-gray-600 mt-2">${loadingText}</div>`,
+                title: 'กำลังบันทึกข้อมูล...',
+                text: 'โปรดรอสักครู่ ระบบจะนำคุณเข้าสู่ ZOOM อัตโนมัติ',
                 allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                didOpen: () => { Swal.showLoading(); }
             });
 
-            if (!currentLineProfile || !currentLineProfile.displayName) {
-                try {
-                    currentLineProfile = await liff.getProfile();
-                } catch (e) {
-                    console.error("Failed to refresh profile:", e);
-                }
-            }
-            
-            const safeProfile = currentLineProfile || {};
-
-            // ส่งข้อมูลไป Backend โดยใช้ ID ที่ Trim แล้ว
-            const payload = {
-                action: 'checkIn',
-                lineUserId: safeProfile.userId || 'U_UNKNOWN',
-                displayName: safeProfile.displayName || 'Guest',
-                pictureUrl: safeProfile.pictureUrl || '',
-                statusMessage: safeProfile.statusMessage || '',
-                actId: String(activity.Act_ID).trim() // สำคัญ: ตัดช่องว่างเพื่อให้ Backend หาเจอแน่นอน
-            };
-
-            fetch(GAS_API_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    
-                    if (isOnsite) {
-                        // สร้าง Timestamp
-                        const now = new Date();
-                        const timestamp = now.toLocaleString('th-TH', { 
-                            dateStyle: 'medium', 
-                            timeStyle: 'short' 
-                        });
-                        
-                        // ข้อมูลสำหรับ QR Code
-                        const qrData = `${safeProfile.displayName}|${timestamp}`;
-                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
-
-                        // แสดง Popup QR Code (สำคัญ: ต้องใช้ Swal.fire)
-                        Swal.fire({
-                            title: '<span class="text-[#3E2723]">ลงทะเบียนสำเร็จ</span>',
-                            html: `
-                                <div class="flex flex-col items-center pt-2">
-                                    <p class="text-sm text-gray-600 mb-1 px-2">โปรดแสดง QR-Code นี้เพื่อเข้าร่วมกิจกรรม</p>
-                                    <!-- 2. เพิ่มข้อความแนะนำให้ Screen Shot -->
-                                    <p class="text-xs text-gray-400 mb-4 px-2">(สามารถ Screen Shot เก็บไว้ได้)</p>
-                                    
-                                    <!-- 3. รูปโปรไฟล์ -->
-                                    <img src="${safeProfile.pictureUrl || 'https://via.placeholder.com/80'}" 
-                                         class="w-20 h-20 rounded-full border-4 border-white shadow-md mb-3 object-cover">
-                                    
-                                    <!-- 2. ชื่อ -->
-                                    <h3 class="text-lg font-bold text-[#5D4037] mb-3">${safeProfile.displayName}</h3>
-                                    
-                                    <!-- 1. QR Code (DisplayName + Timestamp) -->
-                                    <div class="bg-white p-2 rounded-xl shadow-inner border border-gray-200 mb-2">
-                                        <img src="${qrUrl}" alt="QR Code" class="w-48 h-48">
-                                    </div>
-                                    
-                                    <!-- Timestamp -->
-                                    <p class="text-xs text-gray-400 mt-1 font-mono">${timestamp}</p>
-                                </div>
-                            `,
-                            showConfirmButton: true,
-                            confirmButtonText: 'รับทราบ', // 4. ปุ่มรับทราบ
-                            confirmButtonColor: '#5D4037',
-                            customClass: {
-                                popup: 'rounded-2xl',
-                                confirmButton: 'rounded-xl px-6 py-2.5 text-base font-medium shadow-lg'
-                            }
-                        });
-
-                    } else {
-                        // --- กรณีไม่ใช่ Onsite (ทำงานแบบเดิม) ---
-                        if (data.zoomLink && data.zoomLink.trim() !== "") {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'สำเร็จ!',
-                                text: 'กำลังเปิด Zoom Application...',
-                                timer: 1500,
-                                showConfirmButton: false
-                            }).then(() => {
-                                openZoom(data.zoomLink);
-                            });
-                        } else {
-                            // กรณีไม่มีลิ้งก์ Zoom (เช่นลืมใส่)
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'ลงทะเบียนสำเร็จ',
-                                text: 'บันทึกข้อมูลเรียบร้อยแล้ว (กิจกรรมนี้ไม่มี Zoom Link)',
-                                confirmButtonText: 'ตกลง',
-                                confirmButtonColor: '#5D4037'
-                            });
-                        }
+            try {
+                const payload = {
+                    action: 'checkIn',
+                    data: {
+                        LineUserID: currentUser.userId,
+                        MemberName: user.MemberName || user.LineRegisterName || currentUser.displayName,
+                        MemberID: user.MemberID || currentUser.displayName,
+                        MemberCare: user.MemberCare || "Visitors",
+                        Act_Type: act.Act_Type,
+                        Act_Name: act.Act_Name,
+                        Act_Description: act.Act_Description,
+                        Act_Date: act.Act_Date,
+                        Zoom_Name: act.ZOOM_name,
+                        isFirstTime: "False"
                     }
+                };
 
-                } else {
-                    throw new Error(data.message);
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success' || result.status === 'already_checked_in') {
+                    Swal.close();
+                    // บันทึกสำเร็จ หรือเคยบันทึกแล้ว -> เปิด ZOOM
+                    liff.openWindow({
+                        url: act.ZOOM_Link,
+                        external: true
+                    });
                 }
-            })
-            .catch(error => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'เกิดข้อผิดพลาด',
-                    text: error.message
+            } catch (err) {
+                Swal.fire("เกิดข้อผิดพลาด", "การบันทึกขัดข้อง แต่คุณยังสามารถเข้าลิงก์ได้", "warning").then(() => {
+                    liff.openWindow({ url: act.ZOOM_Link, external: true });
                 });
-            });
-        }
-
-        function openZoom(url) {
-            if (!url) return;
-            if (liff.isInClient()) {
-                liff.openWindow({
-                    url: url,
-                    external: true
-                });
-            } else {
-                window.location.href = url;
             }
         }
 
-        main();
+        function switchTab(tab) {
+            ['dashboard', 'history', 'help'].forEach(t => {
+                document.getElementById(`content-${t}`).classList.toggle('hidden', t !== tab);
+                document.getElementById(`tab-${t}`).className = `py-3 px-4 text-sm font-medium ${t === tab ? 'tab-active' : 'text-slate-400'}`;
+            });
+            if (tab === 'history') loadHistory();
+        }
 
+        async function loadHistory() {
+            const container = document.getElementById('history-list');
+            container.innerHTML = '<div class="loader mx-auto"></div>';
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=getHistory&userId=${currentUser.userId}`);
+                const data = await response.json();
+                container.innerHTML = data.history.map(h => `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-amber-200">
+                        <div class="text-[10px] text-slate-400">${new Date(h.Timestamp).toLocaleString()}</div>
+                        <div class="font-bold text-slate-700">${h.Act_Name}</div>
+                        <div class="text-xs text-slate-500">${h.Act_Type} • Online</div>
+                    </div>
+                `).join('') || '<p class="text-center text-slate-400 py-10">ยังไม่มีประวัติการเช็คอิน</p>';
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-400">โหลดข้อมูลไม่สำเร็จ</p>';
+            }
+        }
+
+        function showLoader(part, show) {
+            const el = document.getElementById(`${part}-loading`);
+            if (el) el.classList.toggle('hidden', !show);
+        }
+
+        window.onload = initApp;
     </script>
 </body>
 </html>
