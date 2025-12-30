@@ -79,13 +79,14 @@
         const urlParams = new URLSearchParams(window.location.search);
         let currentType = urlParams.get('Type') || urlParams.get('type') || 'Community';
 
-        // ฟังก์ชันช่วยจัดการวันที่ให้แม่นยำขึ้น
+        // ฟังก์ชันช่วยจัดการวันที่ให้แม่นยำขึ้น รองรับ MM/DD/YYYY และ ISO String
         function parseAnyDate(dateVal) {
             if (!dateVal) return new Date();
-            let d = new Date(dateVal);
             
-            // ถ้าเป็นวันที่ปกติ (ปีมากกว่า 2000) ให้ใช้ได้เลย
-            if (!isNaN(d.getTime()) && d.getFullYear() > 2000) return d;
+            // กรณีเป็น ISO String จาก GAS (เช่น 2025-12-31T01:00:00.000Z)
+            if (typeof dateVal === 'string' && dateVal.includes('T')) {
+                return new Date(dateVal);
+            }
 
             // กรณีเป็น String รูปแบบ MM/DD/YYYY หรือ DD/MM/YYYY
             const parts = String(dateVal).split(/[/ -]/);
@@ -94,27 +95,42 @@
                 let p1 = parseInt(parts[1]);
                 let p2 = parseInt(parts[2]);
 
-                // ตรวจสอบว่า p0 หรือ p1 อันไหนเป็นเดือน (เดือนต้อง <= 12)
-                // ถ้า p0 > 12 แสดงว่าเป็น MM/DD/YYYY (เช่น 12/31/2025) -> p1 คือ 31
-                if (p1 > 12) {
-                    return new Date(p2, p0 - 1, p1);
+                // ตรวจสอบว่า p0 หรือ p1 อันไหนเป็นเดือน (ถ้า p1 > 12 แสดงว่า p0 คือเดือน)
+                if (p0 <= 12 && p1 > 12) {
+                    return new Date(p2, p0 - 1, p1); // MM/DD/YYYY
+                } else if (p0 > 12 && p1 <= 12) {
+                    return new Date(p2, p1 - 1, p0); // DD/MM/YYYY
+                } else {
+                    // กรณีคลุมเครือ (เช่น 05/06/2025) ให้ลองใช้ new Date ตรงๆ
+                    return new Date(dateVal);
                 }
-                // ถ้า p1 <= 12 ให้ถือว่าเป็น DD/MM/YYYY ตามปกติไทย
-                return new Date(p2, p1 - 1, p0);
             }
-            return d;
+            return new Date(dateVal);
         }
 
-        // ฟังก์ชันช่วยจัดการเวลา
+        // ฟังก์ชันจัดการเวลาให้แสดงแค่ HH:mm
         function formatTimeDisplay(timeVal) {
             if (!timeVal) return "00:00";
             let d = new Date(timeVal);
-            // ถ้าแปลงเป็น Date สำเร็จ ให้ดึงแค่ HH:mm
             if (!isNaN(d.getTime())) {
-                return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+                // ถ้าเป็นปี 1899 (ส่งมาจาก Sheet Time cell) ให้ดึงแค่เวลา
+                const h = d.getHours().toString().padStart(2, '0');
+                const m = d.getMinutes().toString().padStart(2, '0');
+                return `${h}:${m}`;
             }
-            // ถ้าเป็น String อยู่แล้ว ให้ตัดเอาแค่ 5 ตัวแรก
+            // ถ้าเป็น String "HH:mm:ss"
             return String(timeVal).substring(0, 5);
+        }
+
+        // ฟังก์ชันคำนวณเวลาล่วงหน้า 15 นาที
+        function getCheckInOpenTime(startTimeStr) {
+            const [h, m] = startTimeStr.split(':').map(Number);
+            let date = new Date();
+            date.setHours(h, m, 0);
+            date.setMinutes(date.getMinutes() - 15);
+            const resH = date.getHours().toString().padStart(2, '0');
+            const resM = date.getMinutes().toString().padStart(2, '0');
+            return `${resH}:${resM}`;
         }
 
         function formatThaiDateFull(dateStr) {
@@ -122,7 +138,6 @@
             const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
             
             let date = parseAnyDate(dateStr);
-
             const now = new Date();
             now.setHours(0,0,0,0);
             const target = new Date(date);
@@ -131,7 +146,11 @@
             const diffTime = target.getTime() - now.getTime();
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-            let remain = diffDays > 0 ? ` (เหลืออีก ${diffDays} วัน)` : (diffDays === 0 ? " (วันนี้)" : "");
+            let remain = "";
+            if (diffDays === 0) remain = " (วันนี้)";
+            else if (diffDays === 1) remain = " (พรุ่งนี้)";
+            else if (diffDays > 1) remain = ` (เหลืออีก ${diffDays} วัน)`;
+
             return `วัน${days[date.getDay()]}ที่ ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}${remain}`;
         }
 
@@ -182,7 +201,8 @@
             }
 
             container.innerHTML = list.map((act, index) => {
-                const displayTime = formatTimeDisplay(act.StartTime);
+                const startTimeStr = formatTimeDisplay(act.StartTime);
+                const openTimeStr = getCheckInOpenTime(startTimeStr);
                 return `
                     <div class="coffee-card p-6 rounded-3xl space-y-4" id="act-card-${index}">
                         <div class="flex justify-between items-start">
@@ -192,7 +212,7 @@
                         <h3 class="font-bold text-slate-800 text-lg leading-tight">${act.Act_Name}</h3>
                         <div class="space-y-1">
                             <p class="text-xs text-slate-500 flex items-center gap-2">📅 ${formatThaiDateFull(act.Act_Date)}</p>
-                            <p class="text-xs text-amber-700 font-semibold flex items-center gap-2">⏰ เวลาที่เริ่มเปิด ZOOM ${displayTime} น.</p>
+                            <p class="text-xs text-amber-700 font-semibold flex items-center gap-2">⏰ เริ่มเปิด ZOOM ${openTimeStr} น.</p>
                         </div>
                         <div id="action-area-${index}"></div>
                     </div>
@@ -213,12 +233,12 @@
                 const endTimeStr = formatTimeDisplay(act.EndTime);
                 
                 const start = new Date(actDate);
-                const [sH, sM] = startTimeStr.split(':');
-                start.setHours(parseInt(sH), parseInt(sM), 0);
+                const [sH, sM] = startTimeStr.split(':').map(Number);
+                start.setHours(sH, sM, 0);
 
                 const end = new Date(actDate);
-                const [eH, eM] = endTimeStr.split(':');
-                end.setHours(parseInt(eH), parseInt(eM), 0);
+                const [eH, eM] = endTimeStr.split(':').map(Number);
+                end.setHours(eH, eM, 0);
                 
                 const diffMs = start.getTime() - now.getTime();
                 const diffMin = diffMs / (1000 * 60);
@@ -240,8 +260,7 @@
                 } else {
                     statusEl.innerText = "ยังไม่ถึงเวลา";
                     statusEl.className = "text-[10px] font-bold text-slate-400";
-                    const displayDate = act.Act_Date.toString().split('T')[0];
-                    actionEl.innerHTML = `<div class="bg-slate-50 p-3 rounded-2xl text-center"><p class="text-[9px] text-slate-400">จะเปิดให้เช็คอินวันที่ ${startTimeStr} น.</p></div>`;
+                    actionEl.innerHTML = `<div class="bg-slate-50 p-3 rounded-2xl text-center"><p class="text-[9px] text-slate-400">จะเปิดให้เช็คอินเวลา ${getCheckInOpenTime(startTimeStr)} น.</p></div>`;
                 }
             };
 
