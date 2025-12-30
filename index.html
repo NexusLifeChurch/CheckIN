@@ -26,7 +26,7 @@
                 <p class="text-[10px] opacity-80" id="currentDateHeader"></p>
             </div>
             <div id="userProfile" class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-white/20 animate-pulse"></div>
+                <div id="loaderProfile" class="w-8 h-8 rounded-full bg-white/20 animate-pulse"></div>
             </div>
         </div>
     </header>
@@ -79,23 +79,57 @@
         const urlParams = new URLSearchParams(window.location.search);
         let currentType = urlParams.get('Type') || urlParams.get('type') || 'Community';
 
+        // ฟังก์ชันช่วยจัดการวันที่ให้แม่นยำขึ้น
+        function parseAnyDate(dateVal) {
+            if (!dateVal) return new Date();
+            let d = new Date(dateVal);
+            
+            // ถ้าเป็นวันที่ปกติ (ปีมากกว่า 2000) ให้ใช้ได้เลย
+            if (!isNaN(d.getTime()) && d.getFullYear() > 2000) return d;
+
+            // กรณีเป็น String รูปแบบ MM/DD/YYYY หรือ DD/MM/YYYY
+            const parts = String(dateVal).split(/[/ -]/);
+            if (parts.length === 3) {
+                let p0 = parseInt(parts[0]);
+                let p1 = parseInt(parts[1]);
+                let p2 = parseInt(parts[2]);
+
+                // ตรวจสอบว่า p0 หรือ p1 อันไหนเป็นเดือน (เดือนต้อง <= 12)
+                // ถ้า p0 > 12 แสดงว่าเป็น MM/DD/YYYY (เช่น 12/31/2025) -> p1 คือ 31
+                if (p1 > 12) {
+                    return new Date(p2, p0 - 1, p1);
+                }
+                // ถ้า p1 <= 12 ให้ถือว่าเป็น DD/MM/YYYY ตามปกติไทย
+                return new Date(p2, p1 - 1, p0);
+            }
+            return d;
+        }
+
+        // ฟังก์ชันช่วยจัดการเวลา
+        function formatTimeDisplay(timeVal) {
+            if (!timeVal) return "00:00";
+            let d = new Date(timeVal);
+            // ถ้าแปลงเป็น Date สำเร็จ ให้ดึงแค่ HH:mm
+            if (!isNaN(d.getTime())) {
+                return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+            }
+            // ถ้าเป็น String อยู่แล้ว ให้ตัดเอาแค่ 5 ตัวแรก
+            return String(timeVal).substring(0, 5);
+        }
+
         function formatThaiDateFull(dateStr) {
             const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
             const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
             
-            let date;
-            if (String(dateStr).includes('/')) {
-                const [d, m, y] = String(dateStr).split('/');
-                date = new Date(y, m - 1, d);
-            } else {
-                date = new Date(dateStr);
-            }
+            let date = parseAnyDate(dateStr);
 
             const now = new Date();
             now.setHours(0,0,0,0);
             const target = new Date(date);
             target.setHours(0,0,0,0);
-            const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+            
+            const diffTime = target.getTime() - now.getTime();
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
             let remain = diffDays > 0 ? ` (เหลืออีก ${diffDays} วัน)` : (diffDays === 0 ? " (วันนี้)" : "");
             return `วัน${days[date.getDay()]}ที่ ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}${remain}`;
@@ -148,6 +182,7 @@
             }
 
             container.innerHTML = list.map((act, index) => {
+                const displayTime = formatTimeDisplay(act.StartTime);
                 return `
                     <div class="coffee-card p-6 rounded-3xl space-y-4" id="act-card-${index}">
                         <div class="flex justify-between items-start">
@@ -157,7 +192,7 @@
                         <h3 class="font-bold text-slate-800 text-lg leading-tight">${act.Act_Name}</h3>
                         <div class="space-y-1">
                             <p class="text-xs text-slate-500 flex items-center gap-2">📅 ${formatThaiDateFull(act.Act_Date)}</p>
-                            <p class="text-xs text-amber-700 font-semibold flex items-center gap-2">⏰ เวลาที่เริ่มเปิด ZOOM ${act.StartTime} น.</p>
+                            <p class="text-xs text-amber-700 font-semibold flex items-center gap-2">⏰ เวลาที่เริ่มเปิด ZOOM ${displayTime} น.</p>
                         </div>
                         <div id="action-area-${index}"></div>
                     </div>
@@ -173,14 +208,19 @@
 
             const tick = () => {
                 const now = new Date();
-                let dateStr = String(act.Act_Date).split(' ')[0];
-                const [d, m, y] = dateStr.includes('/') ? dateStr.split('/') : dateStr.split('-');
-                const formattedDate = dateStr.includes('/') ? `${y}-${m}-${d}` : dateStr;
+                const actDate = parseAnyDate(act.Act_Date);
+                const startTimeStr = formatTimeDisplay(act.StartTime);
+                const endTimeStr = formatTimeDisplay(act.EndTime);
                 
-                const start = new Date(`${formattedDate}T${act.StartTime}:00`);
-                const end = new Date(`${formattedDate}T${act.EndTime}:00`);
+                const start = new Date(actDate);
+                const [sH, sM] = startTimeStr.split(':');
+                start.setHours(parseInt(sH), parseInt(sM), 0);
+
+                const end = new Date(actDate);
+                const [eH, eM] = endTimeStr.split(':');
+                end.setHours(parseInt(eH), parseInt(eM), 0);
                 
-                const diffMs = start - now;
+                const diffMs = start.getTime() - now.getTime();
                 const diffMin = diffMs / (1000 * 60);
 
                 if (now > end) {
@@ -200,7 +240,8 @@
                 } else {
                     statusEl.innerText = "ยังไม่ถึงเวลา";
                     statusEl.className = "text-[10px] font-bold text-slate-400";
-                    actionEl.innerHTML = `<div class="bg-slate-50 p-3 rounded-2xl text-center"><p class="text-[9px] text-slate-400">จะเปิดให้เช็คอินวันที่ ${act.Act_Date} เวลา ${act.StartTime} น.</p></div>`;
+                    const displayDate = act.Act_Date.toString().split('T')[0];
+                    actionEl.innerHTML = `<div class="bg-slate-50 p-3 rounded-2xl text-center"><p class="text-[9px] text-slate-400">จะเปิดให้เช็คอินวันที่ ${startTimeStr} น.</p></div>`;
                 }
             };
 
