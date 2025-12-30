@@ -11,100 +11,122 @@
     <style>
         body { font-family: 'Prompt', sans-serif; background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%); min-height: 100vh; }
         .coffee-gradient { background: linear-gradient(to right, #6f4e37, #a67b5b); }
-        .coffee-card { background: rgba(255, 255, 255, 0.9); border-left: 5px solid #6f4e37; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        .tab-active { border-bottom: 3px solid #6f4e37; color: #6f4e37; font-weight: 700; }
+        .coffee-card { background: rgba(255, 255, 255, 0.95); border-left: 6px solid #6f4e37; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+        .tab-active { border-bottom: 4px solid #6f4e37; color: #6f4e37; font-weight: 700; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #6f4e37; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-slate-800">
 
-    <header class="coffee-gradient text-white p-4 shadow-lg sticky top-0 z-50">
+    <header class="coffee-gradient text-white p-5 shadow-lg sticky top-0 z-50">
         <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-tight">Activity Check-in</h1>
-            <div id="userProfile" class="flex items-center gap-2">
-                <div id="loaderProfile" class="w-8 h-8 rounded-full bg-white/20 animate-pulse"></div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">Activity Check-in</h1>
+                <p class="text-[10px] opacity-80" id="currentDateHeader"></p>
+            </div>
+            <div id="userProfile" class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-white/20 animate-pulse"></div>
             </div>
         </div>
     </header>
 
-    <nav class="bg-white/80 backdrop-blur-sm shadow-sm sticky top-[64px] z-40">
+    <nav class="bg-white/90 backdrop-blur-md shadow-sm sticky top-[76px] z-40">
         <div class="max-w-4xl mx-auto flex justify-around">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-3 px-4 text-sm font-medium tab-active">หน้าหลัก</button>
-            <button onclick="switchTab('history')" id="tab-history" class="py-3 px-4 text-sm font-medium text-slate-400">ประวัติ</button>
-            <button onclick="switchTab('help')" id="tab-help" class="py-3 px-4 text-sm font-medium text-slate-400">ช่วยเหลือ</button>
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-4 px-6 text-sm font-medium tab-active transition-all">แดชบอร์ด</button>
+            <button onclick="switchTab('history')" id="tab-history" class="py-4 px-6 text-sm font-medium text-slate-400 transition-all">ประวัติ</button>
+            <button onclick="switchTab('help')" id="tab-help" class="py-4 px-6 text-sm font-medium text-slate-400 transition-all">ช่วยเหลือ</button>
         </div>
     </nav>
 
-    <main class="max-w-4xl mx-auto p-4 md:p-6 mb-20">
-        <div id="content-dashboard" class="space-y-4">
-            <div id="dashboard-loading" class="flex flex-col items-center py-20 text-slate-400">
-                <div class="loader mb-2"></div>
-                <p>กำลังเตรียมรายการกิจกรรม...</p>
+    <main class="max-w-4xl mx-auto p-4 md:p-8 mb-20">
+        <div id="content-dashboard" class="space-y-6">
+            <div id="dashboard-loading" class="flex flex-col items-center py-24 text-slate-400">
+                <div class="loader mb-4"></div>
+                <p class="animate-pulse">กำลังตรวจสอบกิจกรรม...</p>
             </div>
-            <div id="dashboard-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-            <div id="dashboard-error" class="hidden bg-white p-8 rounded-2xl shadow-sm text-center border-t-4 border-red-400">
-                <p id="error-text" class="text-slate-600 font-medium"></p>
-                <button onclick="loadDashboard()" class="mt-4 text-sm text-blue-600 underline">ลองใหม่อีกครั้ง</button>
+            <div id="dashboard-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            <div id="dashboard-error" class="hidden bg-white p-10 rounded-3xl shadow-xl text-center border-t-8 border-red-500">
+                <div class="text-4xl mb-4">⚠️</div>
+                <p id="error-text" class="text-slate-700 font-bold text-lg mb-4"></p>
+                <button onclick="location.reload()" class="coffee-gradient text-white px-8 py-2 rounded-full font-bold">ลองใหม่อีกครั้ง</button>
             </div>
         </div>
 
         <div id="content-history" class="hidden space-y-4">
-            <h2 class="font-bold text-lg text-amber-900">ประวัติการเช็คอิน</h2>
-            <div id="history-list" class="space-y-3"></div>
+            <h2 class="font-bold text-xl text-amber-900 border-b pb-2">ประวัติการเข้าร่วม</h2>
+            <div id="history-list" class="space-y-4"></div>
         </div>
 
         <div id="content-help" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm">
-                <h2 class="font-bold text-lg mb-4">วิธีการใช้งาน</h2>
-                <ul class="space-y-3 text-sm text-slate-600">
-                    <li>1. เลือกประเภทกิจกรรมจากเมนู LINE</li>
-                    <li>2. ระบบจะแสดงกิจกรรมที่คุณมีสิทธิ์เข้าร่วม</li>
-                    <li>3. เมื่อถึงเวลาเริ่มกิจกรรม ปุ่มเข้าสู่ ZOOM จะปรากฏขึ้น</li>
-                    <li>4. ระบบจะบันทึกข้อมูลการเช็คอินอัตโนมัติก่อนเปิด ZOOM</li>
-                </ul>
+            <div class="bg-white p-8 rounded-3xl shadow-sm">
+                <h2 class="font-bold text-xl mb-6 text-amber-900">วิธีการใช้งานระบบ</h2>
+                <div class="space-y-4 text-sm text-slate-600">
+                    <p>1. ระบบจะแสดงกิจกรรมเฉพาะที่คุณมีสิทธิ์เข้าถึง (Care ของคุณ / Course ที่ลงทะเบียน)</p>
+                    <p>2. ปุ่มเช็คอินจะเปิดให้กดได้ในช่วงเวลาที่กิจกรรมเริ่มเท่านั้น</p>
+                    <p>3. เมื่อกดปุ่ม ระบบจะบันทึกข้อมูลและเปิดหน้า ZOOM ให้คุณโดยอัตโนมัติ</p>
+                </div>
             </div>
         </div>
     </main>
 
     <script>
-        // CONFIGURATION (ข้อมูลจาก User)
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-p-Mc7Eu059t4n2fnTxhBl07NM98TeEq4Ng6FPMtriMtVotUx7YCrec8K6iBeadPBvw/exec"; 
         const LIFF_ID = "2008560135-XxjApLRo";
 
         let currentUser = null;
+        let countdownIntervals = [];
         const urlParams = new URLSearchParams(window.location.search);
         let currentType = urlParams.get('Type') || urlParams.get('type') || 'Community';
 
+        function formatThaiDateFull(dateStr) {
+            const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+            const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            
+            let date;
+            if (String(dateStr).includes('/')) {
+                const [d, m, y] = String(dateStr).split('/');
+                date = new Date(y, m - 1, d);
+            } else {
+                date = new Date(dateStr);
+            }
+
+            const now = new Date();
+            now.setHours(0,0,0,0);
+            const target = new Date(date);
+            target.setHours(0,0,0,0);
+            const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+
+            let remain = diffDays > 0 ? ` (เหลืออีก ${diffDays} วัน)` : (diffDays === 0 ? " (วันนี้)" : "");
+            return `วัน${days[date.getDay()]}ที่ ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}${remain}`;
+        }
+
         async function initApp() {
             try {
+                document.getElementById('currentDateHeader').innerText = formatThaiDateFull(new Date());
                 await liff.init({ liffId: LIFF_ID });
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
+                if (!liff.isLoggedIn()) { liff.login(); return; }
                 const profile = await liff.getProfile();
                 currentUser = profile;
                 document.getElementById('userProfile').innerHTML = `
-                    <span class="text-xs font-medium hidden md:block">${profile.displayName}</span>
-                    <img src="${profile.pictureUrl}" class="w-8 h-8 rounded-full border-2 border-white/50 shadow-sm">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-xs font-bold leading-none">${profile.displayName}</p>
+                        <p class="text-[8px] opacity-70">กำลังใช้งาน</p>
+                    </div>
+                    <img src="${profile.pictureUrl}" class="w-10 h-10 rounded-full border-2 border-white/50 shadow-sm">
                 `;
                 loadDashboard();
-            } catch (err) {
-                console.error("LIFF Init Error:", err);
-                Swal.fire("Error", "การเชื่อมต่อ LINE ผิดพลาด", "error");
-            }
+            } catch (err) { Swal.fire("Error", "เชื่อมต่อ LINE ไม่สำเร็จ", "error"); }
         }
 
         async function loadDashboard() {
             showLoader('dashboard', true);
             document.getElementById('dashboard-error').classList.add('hidden');
+            countdownIntervals.forEach(clearInterval);
             
             try {
-                const apiCall = `${SCRIPT_URL}?action=getDashboard&userId=${currentUser.userId}&type=${currentType}`;
-                const response = await fetch(apiCall);
+                const response = await fetch(`${SCRIPT_URL}?action=getDashboard&userId=${currentUser.userId}&type=${currentType}`);
                 const data = await response.json();
-                
                 if (data.errorMessage) {
                     document.getElementById('dashboard-list').innerHTML = '';
                     document.getElementById('dashboard-error').classList.remove('hidden');
@@ -113,138 +135,115 @@
                     renderActivities(data.activities, data.user);
                 }
             } catch (err) {
-                console.error("Fetch Error:", err);
                 document.getElementById('dashboard-error').classList.remove('hidden');
                 document.getElementById('error-text').innerText = "ไม่สามารถเชื่อมต่อฐานข้อมูลได้";
-            } finally {
-                showLoader('dashboard', false);
-            }
+            } finally { showLoader('dashboard', false); }
         }
 
         function renderActivities(list, userData) {
             const container = document.getElementById('dashboard-list');
             if (!list || list.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center py-20 text-slate-400">ไม่มีกิจกรรมที่เปิดให้เข้าถึงในขณะนี้</p>';
+                container.innerHTML = '<div class="col-span-full text-center py-20 bg-white rounded-3xl text-slate-400">ไม่มีกิจกรรมที่เปิดให้เข้าถึงในขณะนี้</div>';
                 return;
             }
-            container.innerHTML = list.map(act => {
-                const timeStatus = checkTimeRule(act.Act_Date, act.StartTime, act.EndTime);
+
+            container.innerHTML = list.map((act, index) => {
                 return `
-                    <div class="coffee-card p-5 rounded-2xl space-y-3">
+                    <div class="coffee-card p-6 rounded-3xl space-y-4" id="act-card-${index}">
                         <div class="flex justify-between items-start">
-                            <span class="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded uppercase tracking-wider">${act.Act_Type}</span>
-                            <span class="text-xs font-bold ${timeStatus.color}">${timeStatus.label}</span>
+                            <span class="text-[10px] font-bold px-3 py-1 bg-amber-100 text-amber-800 rounded-full uppercase tracking-widest">${act.Act_Type}</span>
+                            <div id="timer-status-${index}" class="text-[10px] font-bold"></div>
                         </div>
-                        <h3 class="font-bold text-slate-800 leading-tight">${act.Act_Name}</h3>
-                        <div class="flex items-center gap-2 text-xs text-slate-400">
-                             <span>📅 ${act.Act_Date}</span>
-                             <span>⏰ ${act.StartTime}-${act.EndTime}</span>
+                        <h3 class="font-bold text-slate-800 text-lg leading-tight">${act.Act_Name}</h3>
+                        <div class="space-y-1">
+                            <p class="text-xs text-slate-500 flex items-center gap-2">📅 ${formatThaiDateFull(act.Act_Date)}</p>
+                            <p class="text-xs text-amber-700 font-semibold flex items-center gap-2">⏰ เวลาที่เริ่มเปิด ZOOM ${act.StartTime} น.</p>
                         </div>
-                        ${timeStatus.canJoin ? 
-                            `<button onclick="handleCheckIn('${encodeURIComponent(JSON.stringify(act))}', '${encodeURIComponent(JSON.stringify(userData))}')" 
-                                class="w-full coffee-gradient text-white py-3 rounded-xl font-bold shadow-md active:scale-95 transition-all">
-                                🚀 เข้าร่วม ZOOM
-                            </button>` : 
-                            `<button disabled class="w-full bg-slate-100 text-slate-400 py-3 rounded-xl font-bold cursor-not-allowed">
-                                ${timeStatus.buttonText}
-                            </button>`
-                        }
+                        <div id="action-area-${index}"></div>
                     </div>
                 `;
             }).join('');
+
+            list.forEach((act, index) => updateTimeStatus(act, index, userData));
         }
 
-        function checkTimeRule(dateStr, start, end) {
-            try {
-                const now = new Date();
-                const [d, m, y] = dateStr.split('/');
-                const startTime = new Date(`${y}-${m}-${d}T${start}:00`);
-                const endTime = new Date(`${y}-${m}-${d}T${end}:00`);
-                
-                if (now > endTime) return { label: "จบกิจกรรมแล้ว", color: "text-slate-400", canJoin: false, buttonText: "ปิดการเข้าร่วม" };
-                if (now >= startTime && now <= endTime) return { label: "เริ่มแล้ว", color: "text-emerald-500", canJoin: true };
-                
-                // ตรวจสอบสถานะกำลังจะเริ่ม (ก่อน 15 นาที)
-                const diffMs = startTime - now;
-                const diffMin = diffMs / (1000 * 60);
-                if (diffMin <= 15 && diffMin > 0) return { label: "เตรียมตัว", color: "text-orange-500", canJoin: false, buttonText: "เตรียมตัวเร็วๆ นี้" };
+        function updateTimeStatus(act, index, userData) {
+            const statusEl = document.getElementById(`timer-status-${index}`);
+            const actionEl = document.getElementById(`action-area-${index}`);
 
-                return { label: "ยังไม่ถึงเวลา", color: "text-slate-400", canJoin: false, buttonText: "ยังไม่ถึงเวลาเปิด" };
-            } catch (e) { return { label: "ข้อมูลเวลาผิดพลาด", color: "text-red-400", canJoin: false, buttonText: "เช็คเวลาไม่ได้" }; }
+            const tick = () => {
+                const now = new Date();
+                let dateStr = String(act.Act_Date).split(' ')[0];
+                const [d, m, y] = dateStr.includes('/') ? dateStr.split('/') : dateStr.split('-');
+                const formattedDate = dateStr.includes('/') ? `${y}-${m}-${d}` : dateStr;
+                
+                const start = new Date(`${formattedDate}T${act.StartTime}:00`);
+                const end = new Date(`${formattedDate}T${act.EndTime}:00`);
+                
+                const diffMs = start - now;
+                const diffMin = diffMs / (1000 * 60);
+
+                if (now > end) {
+                    statusEl.innerText = "สิ้นสุดกิจกรรมแล้ว";
+                    statusEl.className = "text-[10px] font-bold text-slate-400";
+                    actionEl.innerHTML = `<button disabled class="w-full bg-slate-100 text-slate-400 py-3 rounded-2xl font-bold cursor-not-allowed">กิจกรรมจบแล้ว</button>`;
+                } else if (now >= start && now <= end) {
+                    statusEl.innerText = "● เริ่มกิจกรรมแล้ว";
+                    statusEl.className = "text-[10px] font-bold text-emerald-500 animate-pulse";
+                    actionEl.innerHTML = `<button onclick="handleCheckIn('${encodeURIComponent(JSON.stringify(act))}', '${encodeURIComponent(JSON.stringify(userData))}')" class="w-full coffee-gradient text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">🚀 เข้าร่วม ZOOM</button>`;
+                } else if (diffMin <= 15 && diffMin > 0) {
+                    const min = Math.floor(diffMin);
+                    const sec = Math.floor((diffMs / 1000) % 60);
+                    statusEl.innerText = `จะเริ่มในอีก ${min}:${sec.toString().padStart(2, '0')}`;
+                    statusEl.className = "text-[10px] font-bold text-orange-500";
+                    actionEl.innerHTML = `<button disabled class="w-full bg-amber-50 text-amber-300 py-3 rounded-2xl font-bold border border-amber-100 cursor-not-allowed">รอเปิดเช็คอิน...</button>`;
+                } else {
+                    statusEl.innerText = "ยังไม่ถึงเวลา";
+                    statusEl.className = "text-[10px] font-bold text-slate-400";
+                    actionEl.innerHTML = `<div class="bg-slate-50 p-3 rounded-2xl text-center"><p class="text-[9px] text-slate-400">จะเปิดให้เช็คอินวันที่ ${act.Act_Date} เวลา ${act.StartTime} น.</p></div>`;
+                }
+            };
+
+            tick();
+            countdownIntervals.push(setInterval(tick, 1000));
         }
 
         async function handleCheckIn(actEncoded, userEncoded) {
             const act = JSON.parse(decodeURIComponent(actEncoded));
             const user = JSON.parse(decodeURIComponent(userEncoded));
-            
-            Swal.fire({ 
-                title: 'กำลังบันทึกข้อมูล...', 
-                text: 'ระบบกำลังนำท่านเข้าสู่ ZOOM', 
-                allowOutsideClick: false, 
-                didOpen: () => Swal.showLoading() 
-            });
-
+            Swal.fire({ title: 'กำลังบันทึกข้อมูล...', html: '<div class="loader mx-auto mb-4"></div>โปรดรอสักครู่ ระบบกำลังพาคุณเข้าสู่ ZOOM', showConfirmButton: false, allowOutsideClick: false });
             try {
-                const payload = {
-                    action: 'checkIn',
-                    data: {
-                        LineUserID: currentUser.userId,
-                        MemberName: user.MemberName || user.LineRegisterName || currentUser.displayName,
-                        MemberID: user.MemberID || currentUser.displayName,
-                        MemberCare: user.MemberCare || "Visitors",
-                        Act_Type: act.Act_Type,
-                        Act_Name: act.Act_Name,
-                        Act_Description: act.Act_Description,
-                        Act_Date: act.Act_Date,
-                        Zoom_Name: act.ZOOM_name,
-                        isFirstTime: "False"
-                    }
-                };
-
-                const response = await fetch(SCRIPT_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify(payload) 
-                });
-                const result = await response.json();
-                
-                if (result.status === 'success' || result.status === 'already_checked_in') {
-                    Swal.close();
-                    // บันทึกสำเร็จ หรือเคยบันทึกแล้ว -> เปิด ZOOM ด้วย external window (เพื่อ iOS)
-                    liff.openWindow({ 
-                        url: act.ZOOM_Link, 
-                        external: true 
-                    });
-                }
-            } catch (err) {
-                console.error(err);
-                Swal.fire("แจ้งเตือน", "บันทึกข้อมูลขัดข้อง แต่คุณยังเข้า ZOOM ได้", "warning").then(() => {
-                    liff.openWindow({ url: act.ZOOM_Link, external: true });
-                });
-            }
+                const payload = { action: 'checkIn', data: { LineUserID: currentUser.userId, MemberName: user.MemberName || user.LineRegisterName || currentUser.displayName, MemberID: user.MemberID || currentUser.displayName, MemberCare: user.MemberCare || "Visitors", Act_Type: act.Act_Type, Act_Name: act.Act_Name, Act_Description: act.Act_Description, Act_Date: act.Act_Date, Zoom_Name: act.ZOOM_name } };
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                setTimeout(() => { Swal.close(); liff.openWindow({ url: act.ZOOM_Link, external: true }); }, 1000);
+            } catch (err) { liff.openWindow({ url: act.ZOOM_Link, external: true }); }
         }
 
         function switchTab(tab) {
             ['dashboard', 'history', 'help'].forEach(t => {
                 document.getElementById(`content-${t}`).classList.toggle('hidden', t !== tab);
-                document.getElementById(`tab-${t}`).className = `py-3 px-4 text-sm font-medium ${t === tab ? 'tab-active' : 'text-slate-400'}`;
+                document.getElementById(`tab-${t}`).className = `py-4 px-6 text-sm font-medium ${t === tab ? 'tab-active' : 'text-slate-400'}`;
             });
             if (tab === 'history') loadHistory();
         }
 
         async function loadHistory() {
             const container = document.getElementById('history-list');
-            container.innerHTML = '<div class="flex justify-center py-10"><div class="loader"></div></div>';
+            container.innerHTML = '<div class="flex justify-center py-20"><div class="loader"></div></div>';
             try {
                 const response = await fetch(`${SCRIPT_URL}?action=getHistory&userId=${currentUser.userId}`);
                 const data = await response.json();
                 container.innerHTML = (data.history && data.history.length > 0) ? data.history.map(h => `
-                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-amber-200">
-                        <div class="text-[10px] text-slate-400">${new Date(h.Timestamp).toLocaleString('th-TH')}</div>
-                        <div class="font-bold text-slate-700">${h.Act_Name}</div>
-                        <div class="text-xs text-slate-500">${h.Act_Type} • Online</div>
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border-l-4 border-amber-400">
+                        <div class="flex justify-between mb-1 text-[9px] text-slate-400">
+                            <p class="font-bold uppercase">${h.Act_Type}</p>
+                            <p>${new Date(h.Timestamp).toLocaleString('th-TH')}</p>
+                        </div>
+                        <p class="font-bold text-slate-800">${h.Act_Name}</p>
+                        <p class="text-[10px] text-emerald-600 font-medium">✅ เข้าร่วม Online สำเร็จ</p>
                     </div>
-                `).join('') : '<p class="text-center text-slate-400 py-10">ยังไม่มีประวัติการเช็คอิน</p>';
-            } catch (err) { container.innerHTML = '<p class="text-center text-red-400 py-10">ไม่สามารถดึงข้อมูลได้</p>'; }
+                `).join('') : '<div class="text-center py-20 text-slate-400 text-sm">ยังไม่พบประวัติการเช็คอิน</div>';
+            } catch (err) { container.innerHTML = '<p class="text-center text-red-400 py-10">ไม่สามารถโหลดประวัติได้</p>'; }
         }
 
         function showLoader(part, show) {
