@@ -71,66 +71,78 @@
     </main>
 
     <footer class="pb-10 pt-4 text-center">
-        <p class="text-[9px] text-slate-400 uppercase tracking-widest opacity-50" id="versionTag">v1.0.5 - 2025.12.30</p>
+        <p class="text-[9px] text-slate-400 uppercase tracking-widest opacity-50" id="versionTag">v1.0.6 - 2025.12.30</p>
     </footer>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-p-Mc7Eu059t4n2fnTxhBl07NM98TeEq4Ng6FPMtriMtVotUx7YCrec8K6iBeadPBvw/exec"; 
         const LIFF_ID = "2008560135-XxjApLRo";
-        const APP_VERSION = "v1.0.5 (Update: 30 Dec 2025)";
+        const APP_VERSION = "v1.0.6 (Update: 30 Dec 2025)";
 
         let currentUser = null;
         let countdownIntervals = [];
         const urlParams = new URLSearchParams(window.location.search);
         let currentType = urlParams.get('Type') || urlParams.get('type') || 'Community';
 
-        // ฟังก์ชันช่วยจัดการวันที่ MM/DD/YYYY จาก Google Sheets
+        // ฟังก์ชันช่วยจัดการวันที่ MM/DD/YYYY จาก Google Sheets อย่างแม่นยำ
         function parseAnyDate(dateVal) {
             if (!dateVal) return new Date();
             
-            // กรณีเป็น ISO String
+            // หากเป็น ISO String จาก GAS
             if (typeof dateVal === 'string' && dateVal.includes('T')) {
-                return new Date(dateVal);
+                const d = new Date(dateVal);
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0); // บังคับให้เป็นเที่ยงวันป้องกัน Timezone shift
             }
 
-            // แยกส่วนประกอบวันที่
             const parts = String(dateVal).split(/[/ -]/);
             if (parts.length === 3) {
                 let p0 = parseInt(parts[0]);
                 let p1 = parseInt(parts[1]);
                 let p2 = parseInt(parts[2]);
 
-                // ตรวจสอบรูปแบบ MM/DD/YYYY (ถ้า p0 <= 12 และ p1 > 12)
+                // ตรวจสอบรูปแบบ MM/DD/YYYY (เช่น 1/10/2026)
+                // พยายามเดาจากค่าที่มากกว่า 12
                 if (p0 <= 12 && p1 > 12) {
-                    return new Date(p2, p0 - 1, p1);
-                } 
-                // ตรวจสอบรูปแบบ DD/MM/YYYY
-                else if (p0 > 12 && p1 <= 12) {
-                    return new Date(p2, p1 - 1, p0);
+                    return new Date(p2, p0 - 1, p1, 12, 0, 0);
+                } else if (p0 > 12 && p1 <= 12) {
+                    return new Date(p2, p1 - 1, p0, 12, 0, 0);
+                } else {
+                    // หากทั้ง p0 และ p1 <= 12 ให้ยึด MM/DD/YYYY ตามมาตรฐาน Sheet ส่วนใหญ่
+                    return new Date(p2, p0 - 1, p1, 12, 0, 0);
                 }
             }
-            return new Date(dateVal);
+            const finalDate = new Date(dateVal);
+            finalDate.setHours(12, 0, 0, 0);
+            return finalDate;
         }
 
-        // ฟังก์ชันจัดการเวลาให้แสดงแค่ HH:mm
+        // ฟังก์ชันจัดการเวลา ข้ามบัคปี 1899 และดึงเฉพาะ HH:mm
         function formatTimeDisplay(timeVal) {
             if (!timeVal) return "00:00";
-            let d = new Date(timeVal);
-            if (!isNaN(d.getTime())) {
-                const h = d.getHours().toString().padStart(2, '0');
-                const m = d.getMinutes().toString().padStart(2, '0');
+            const timeStr = String(timeVal);
+            
+            // ใช้ Regex ดึงตัวเลข HH:mm ออกมาตรงๆ เพื่อข้ามบัค Timezone 1899
+            const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+            if (match) {
+                let h = match[1].padStart(2, '0');
+                let m = match[2];
+                
+                // ตรวจสอบ PM (กรณีข้อมูลมี AM/PM)
+                if (timeStr.toLowerCase().includes('pm') && parseInt(h) < 12) h = (parseInt(h) + 12).toString();
+                if (timeStr.toLowerCase().includes('am') && parseInt(h) === 12) h = '00';
+                
                 return `${h}:${m}`;
             }
-            return String(timeVal).substring(0, 5);
+            return "00:00";
         }
 
         // คำนวณเวลาล่วงหน้า 15 นาที
         function getCheckInOpenTime(startTimeStr) {
             const [h, m] = startTimeStr.split(':').map(Number);
-            let date = new Date();
-            date.setHours(h, m, 0);
-            date.setMinutes(date.getMinutes() - 15);
-            return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            let d = new Date();
+            d.setHours(h, m, 0);
+            d.setMinutes(d.getMinutes() - 15);
+            return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
         }
 
         function formatThaiDateFull(dateStr) {
@@ -140,6 +152,7 @@
             let date = parseAnyDate(dateStr);
             const now = new Date();
             now.setHours(0,0,0,0);
+            
             const target = new Date(date);
             target.setHours(0,0,0,0);
             
@@ -150,6 +163,7 @@
             if (diffDays === 0) remain = " (วันนี้)";
             else if (diffDays === 1) remain = " (พรุ่งนี้)";
             else if (diffDays > 1) remain = ` (เหลืออีก ${diffDays} วัน)`;
+            else if (diffDays < 0) remain = " (ผ่านมาแล้ว)";
 
             return `วัน${days[date.getDay()]}ที่ ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}${remain}`;
         }
