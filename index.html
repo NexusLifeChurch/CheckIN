@@ -39,7 +39,7 @@
         </div>
     </nav>
 
-    <main class="max-w-4xl mx-auto p-4 md:p-8 mb-20">
+    <main class="max-w-4xl mx-auto p-4 md:p-8 mb-10">
         <div id="content-dashboard" class="space-y-6">
             <div id="dashboard-loading" class="flex flex-col items-center py-24 text-slate-400">
                 <div class="loader mb-4"></div>
@@ -70,39 +70,43 @@
         </div>
     </main>
 
+    <footer class="pb-10 pt-4 text-center">
+        <p class="text-[9px] text-slate-400 uppercase tracking-widest opacity-50" id="versionTag">v1.0.5 - 2025.12.30</p>
+    </footer>
+
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-p-Mc7Eu059t4n2fnTxhBl07NM98TeEq4Ng6FPMtriMtVotUx7YCrec8K6iBeadPBvw/exec"; 
         const LIFF_ID = "2008560135-XxjApLRo";
+        const APP_VERSION = "v1.0.5 (Update: 30 Dec 2025)";
 
         let currentUser = null;
         let countdownIntervals = [];
         const urlParams = new URLSearchParams(window.location.search);
         let currentType = urlParams.get('Type') || urlParams.get('type') || 'Community';
 
-        // ฟังก์ชันช่วยจัดการวันที่ให้แม่นยำขึ้น รองรับ MM/DD/YYYY และ ISO String
+        // ฟังก์ชันช่วยจัดการวันที่ MM/DD/YYYY จาก Google Sheets
         function parseAnyDate(dateVal) {
             if (!dateVal) return new Date();
             
-            // กรณีเป็น ISO String จาก GAS (เช่น 2025-12-31T01:00:00.000Z)
+            // กรณีเป็น ISO String
             if (typeof dateVal === 'string' && dateVal.includes('T')) {
                 return new Date(dateVal);
             }
 
-            // กรณีเป็น String รูปแบบ MM/DD/YYYY หรือ DD/MM/YYYY
+            // แยกส่วนประกอบวันที่
             const parts = String(dateVal).split(/[/ -]/);
             if (parts.length === 3) {
                 let p0 = parseInt(parts[0]);
                 let p1 = parseInt(parts[1]);
                 let p2 = parseInt(parts[2]);
 
-                // ตรวจสอบว่า p0 หรือ p1 อันไหนเป็นเดือน (ถ้า p1 > 12 แสดงว่า p0 คือเดือน)
+                // ตรวจสอบรูปแบบ MM/DD/YYYY (ถ้า p0 <= 12 และ p1 > 12)
                 if (p0 <= 12 && p1 > 12) {
-                    return new Date(p2, p0 - 1, p1); // MM/DD/YYYY
-                } else if (p0 > 12 && p1 <= 12) {
-                    return new Date(p2, p1 - 1, p0); // DD/MM/YYYY
-                } else {
-                    // กรณีคลุมเครือ (เช่น 05/06/2025) ให้ลองใช้ new Date ตรงๆ
-                    return new Date(dateVal);
+                    return new Date(p2, p0 - 1, p1);
+                } 
+                // ตรวจสอบรูปแบบ DD/MM/YYYY
+                else if (p0 > 12 && p1 <= 12) {
+                    return new Date(p2, p1 - 1, p0);
                 }
             }
             return new Date(dateVal);
@@ -113,24 +117,20 @@
             if (!timeVal) return "00:00";
             let d = new Date(timeVal);
             if (!isNaN(d.getTime())) {
-                // ถ้าเป็นปี 1899 (ส่งมาจาก Sheet Time cell) ให้ดึงแค่เวลา
                 const h = d.getHours().toString().padStart(2, '0');
                 const m = d.getMinutes().toString().padStart(2, '0');
                 return `${h}:${m}`;
             }
-            // ถ้าเป็น String "HH:mm:ss"
             return String(timeVal).substring(0, 5);
         }
 
-        // ฟังก์ชันคำนวณเวลาล่วงหน้า 15 นาที
+        // คำนวณเวลาล่วงหน้า 15 นาที
         function getCheckInOpenTime(startTimeStr) {
             const [h, m] = startTimeStr.split(':').map(Number);
             let date = new Date();
             date.setHours(h, m, 0);
             date.setMinutes(date.getMinutes() - 15);
-            const resH = date.getHours().toString().padStart(2, '0');
-            const resM = date.getMinutes().toString().padStart(2, '0');
-            return `${resH}:${resM}`;
+            return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
         }
 
         function formatThaiDateFull(dateStr) {
@@ -156,6 +156,7 @@
 
         async function initApp() {
             try {
+                document.getElementById('versionTag').innerText = `Version ${APP_VERSION}`;
                 document.getElementById('currentDateHeader').innerText = formatThaiDateFull(new Date());
                 await liff.init({ liffId: LIFF_ID });
                 if (!liff.isLoggedIn()) { liff.login(); return; }
@@ -164,7 +165,7 @@
                 document.getElementById('userProfile').innerHTML = `
                     <div class="text-right hidden sm:block">
                         <p class="text-xs font-bold leading-none">${profile.displayName}</p>
-                        <p class="text-[8px] opacity-70">กำลังใช้งาน</p>
+                        <p class="text-[8px] opacity-70">Active</p>
                     </div>
                     <img src="${profile.pictureUrl}" class="w-10 h-10 rounded-full border-2 border-white/50 shadow-sm">
                 `;
